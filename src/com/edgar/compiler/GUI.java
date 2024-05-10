@@ -1,0 +1,271 @@
+package com.edgar.compiler;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.*;
+import java.util.Vector;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.Border;
+import javax.swing.filechooser.FileNameExtensionFilter;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.tree.DefaultMutableTreeNode;
+
+public class GUI implements ActionListener {
+
+    private JFrame frame;
+    private DefaultTableModel model;
+
+
+    public GUI() {
+        initializeGui();
+    }
+
+    private void initializeGui() {
+        Dimension screenSize = Toolkit.getDefaultToolkit().getScreenSize();
+
+        Font customFont = new Font("Consolas", Font.PLAIN, 22);
+
+        int frameWidth = (int) (screenSize.width * 0.7);
+        int frameHeight = (int) (screenSize.height * 0.75);
+
+        frame = new JFrame();
+        frame.setTitle("EVM Compiler");
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setSize(frameWidth, frameHeight);
+
+        frame.setLocationRelativeTo(null);
+
+        JTextArea editor = new JTextArea();
+        JTextArea console = new JTextArea();
+
+        JMenuBar menuBar = createMenuBar(editor, console);
+        JPanel mainPanel = createMainPanel(customFont, editor, console);
+
+        frame.setJMenuBar(menuBar);
+        frame.add(mainPanel);
+        frame.setVisible(true);
+    }
+
+    public JMenuBar createMenuBar(JTextArea editor, JTextArea console) {
+
+        JMenuBar menuBarC = new JMenuBar();
+
+        Dimension menuBarSize = new Dimension(menuBarC.getPreferredSize().width, 40);
+        menuBarC.setPreferredSize(menuBarSize);
+
+        JMenu fileMenu = new JMenu("File");
+
+        JMenuItem newMenuItem = new JMenuItem("New...");
+        ImageIcon newIcon = new ImageIcon("resources/newfile.png");
+        newMenuItem.setIcon(newIcon);
+        newMenuItem.setIconTextGap(10);
+
+        newMenuItem.addActionListener(
+                e -> {
+                    editor.setText("");
+                    console.setText("");
+                    model.setRowCount(0);
+                }
+        );
+
+        JMenuItem saveMenuItem = getSaveMenuItem(editor);
+
+
+        JMenuItem openMenuItem = getOpenMenuItem(editor);
+        fileMenu.add(newMenuItem);
+        fileMenu.addSeparator();
+        fileMenu.add(saveMenuItem);
+        fileMenu.addSeparator();
+        fileMenu.add(openMenuItem);
+
+        JButton runButton = getRunButton(editor, console);
+
+        Box container = Box.createHorizontalBox();
+        container.add(Box.createHorizontalGlue());
+        container.add(runButton);
+        container.add(Box.createHorizontalStrut(10));
+
+        menuBarC.add(fileMenu);
+        menuBarC.add(container);
+
+        return menuBarC;
+    }
+
+    private JMenuItem getOpenMenuItem(JTextArea editor) {
+        JMenuItem openMenuItem = new JMenuItem("Open");
+        ImageIcon openIcon = new ImageIcon("resources/open.png");
+        openMenuItem.setIcon(openIcon);
+        openMenuItem.setIconTextGap(10);
+
+        openMenuItem.addActionListener(
+                e -> {
+                    JFileChooser fileChooser = new JFileChooser();
+                    FileNameExtensionFilter fileFilter = new FileNameExtensionFilter("Text Files (*.txt)", "txt");
+                    fileChooser.setFileFilter(fileFilter);
+
+                    int fileChooserResult = fileChooser.showOpenDialog(frame);
+
+                    if( fileChooserResult == JFileChooser.APPROVE_OPTION){
+                        File file = fileChooser.getSelectedFile();
+
+                        try(BufferedReader reader = new BufferedReader(new FileReader(file))){
+                            StringBuilder content = new StringBuilder();
+                            String line;
+                            while ((line = reader.readLine()) != null){
+                                content.append(line).append("\n");
+                            }
+                            editor.setText(content.toString());
+                        }catch(IOException err){
+                            err.fillInStackTrace();
+                            JOptionPane.showMessageDialog(frame, "Error opening text from file",
+                                    "Open Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+
+                }
+        );
+        return openMenuItem;
+    }
+
+    private JButton getRunButton(JTextArea editor, JTextArea console) {
+        JButton runButton = new JButton("Run");
+        runButton.setBackground(new Color(28, 162, 56));
+
+        runButton.setFocusPainted(false);
+        ImageIcon runIcon = new ImageIcon("resources/play.png");
+        runButton.setIcon(runIcon);
+
+        runButton.addActionListener(
+                e -> {
+                    Lexer lexer = new Lexer(editor.getText(), console);
+                    Vector<Token> tokens = lexer.getTokens();
+                    Parser.run(tokens);
+                    model.setRowCount(0);
+                    fillTable(model,tokens);
+                }
+        );
+        return runButton;
+    }
+
+    private JMenuItem getSaveMenuItem(JTextArea editor) {
+        JMenuItem saveMenuItem = new JMenuItem("Save");
+        ImageIcon saveIcon = new ImageIcon("resources/save.png");
+        saveMenuItem.setIcon(saveIcon);
+        saveMenuItem.setIconTextGap(10);
+
+        saveMenuItem.addActionListener(
+                e -> {
+                    JFileChooser fileChooser = new JFileChooser();
+                    FileNameExtensionFilter fileFilter = new FileNameExtensionFilter("Text Files (*.txt)", "txt");
+                    fileChooser.setFileFilter(fileFilter);
+
+                    int fileChooserResult = fileChooser.showSaveDialog(frame);
+
+                    if (fileChooserResult == JFileChooser.APPROVE_OPTION) {
+                        File file = fileChooser.getSelectedFile();
+
+                        // Make sure the file has the correct extension
+                        if (!file.getName().toLowerCase().endsWith(".txt")) {
+                            file = new File(file.getAbsolutePath() + ".txt");
+                        }
+
+                        try (BufferedWriter writer = new BufferedWriter(new FileWriter(file))) {
+                            writer.write(editor.getText());
+                            JOptionPane.showMessageDialog(frame, "Text exported to " + file.getAbsolutePath(),
+                                    "Export Successful", JOptionPane.INFORMATION_MESSAGE);
+                        } catch (IOException err) {
+                            err.fillInStackTrace();
+                            JOptionPane.showMessageDialog(frame, "Error exporting text to file",
+                                    "Export Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                }
+        );
+        return saveMenuItem;
+    }
+
+
+    public JPanel createMainPanel(Font customFont, JTextArea editor, JTextArea console) {
+
+        JPanel mainPanelC = new JPanel();
+
+        mainPanelC.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+
+        gbc.fill = GridBagConstraints.BOTH;
+
+        // ---------- Editor --------------
+        editor.setFont(customFont);
+        JScrollPane editorScrollPane = new JScrollPane(editor);
+        editorScrollPane.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
+        setGbcData(gbc, 0,0,0.6,0.66,1, 2);
+
+        mainPanelC.add(editorScrollPane, gbc);
+
+        // ---------- Tabbed Pane --------------
+        JTabbedPane tabbedPane = new JTabbedPane();
+
+        String[] columnNames = {"Line", "Word", "Token"};
+        Object[][] data = {};
+        model = new DefaultTableModel(data, columnNames);
+        JTable table = new JTable(model);
+        table.setEnabled(false);
+        table.getTableHeader().setReorderingAllowed(false);
+        JScrollPane variableExplorer = new JScrollPane(table);
+        variableExplorer.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
+        DefaultMutableTreeNode testNode = new DefaultMutableTreeNode("Test Node");
+        DefaultMutableTreeNode testNode2 = new DefaultMutableTreeNode("Child");
+        testNode.add(testNode2);
+        JTree parserTree = new JTree(testNode);
+        JScrollPane parserTreeScrollable = new JScrollPane(parserTree);
+        parserTreeScrollable.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
+
+        setGbcData(gbc,1,0,0.4,0.66,1, 2);
+
+
+
+
+        tabbedPane.add("Variable Explorer", variableExplorer);
+        tabbedPane.add("Parser Tree", parserTreeScrollable);
+
+        mainPanelC.add(tabbedPane, gbc);
+
+        // ---------- Console --------------
+        console.setBackground(Color.BLACK);
+        console.setForeground(Color.WHITE);
+        console.setFont(customFont);
+        console.setEditable(false);
+        JScrollPane consoleScrollPane = new JScrollPane(console);
+        setGbcData(gbc, 0,2,1.0,0.33,2,1);
+        Border consoleBorder = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.BLACK), "Console");
+        consoleScrollPane.setBorder(BorderFactory.createCompoundBorder(new EmptyBorder(0, 0, 0, 0), consoleBorder));
+
+        mainPanelC.add(consoleScrollPane, gbc);
+        return mainPanelC;
+
+
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+
+    }
+
+
+    private void fillTable(DefaultTableModel model, Vector<Token> tokens){
+        for(Token token: tokens){
+            model.addRow(new Object[]{token.getRow(),token.getWord(),token.getToken()});
+        }
+    }
+
+    private void setGbcData(GridBagConstraints gbc, int gridX, int gridY, double weightX, double weightY, int gridW, int gridH){
+        gbc.gridx = gridX;
+        gbc.gridy = gridY;
+        gbc.weightx = weightX;
+        gbc.weighty = weightY;
+        gbc.gridwidth = gridW;
+        gbc.gridheight = gridH;
+    }
+}
