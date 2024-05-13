@@ -1,6 +1,5 @@
 package com.edgar.compiler;
 
-import javax.swing.*;
 import java.util.*;
 
 public class Lexer {
@@ -16,6 +15,10 @@ public class Lexer {
             '+','-','*','/','=','!','<','>','%','&','|','^'
     );
 
+    private static final List<String> COMPARISON_OPERATORS = List.of(
+        "!=", "==", "<=", ">=", "++", "--", "+=", "-=", "*=", "/="
+    );
+
     private static final List<Character> DELIMITERS = List.of(
             '(',')','[',']','{','}',';',':',','
     );
@@ -23,6 +26,7 @@ public class Lexer {
     private static final Set<String> keywordSet = new HashSet<>(KEYWORDS);
     private static final Set<Character> operatorSet = new HashSet<>(OPERATORS);
     private static final Set<Character> delimiterSet = new HashSet<>(DELIMITERS);
+    private static final Set<String> comparisonOperatorSet = new HashSet<>(COMPARISON_OPERATORS);
 
     private static final int DOLLAR_SIGN = 0;
     private static final int UNDERSCORE = 1;
@@ -84,11 +88,13 @@ public class Lexer {
             2,4,11,13,14,17,19,20,22,24,25
     ));
     private final Vector<Token> Tokens = new Vector<>();
+    private int rowIndex = 1;
+    private int errorCount;
 
 
-    public Lexer(String editorText, JTextArea console){
+    public Lexer(String editorText){
         String[] editorLines = editorText.split("\n");
-        int rowIndex = 1;
+
         for(String line: editorLines){
             if (!line.isEmpty())
                 splitLine(line, rowIndex);
@@ -99,6 +105,10 @@ public class Lexer {
     public Vector<Token> getTokens() {
         return Tokens;
     }
+
+    public int getRows() {return rowIndex; }
+
+    public int getErrorCount() {return errorCount; }
 
     private boolean isSpace(char c){
         return c == ' ';
@@ -111,7 +121,6 @@ public class Lexer {
     private boolean isOperator(char c){
         return operatorSet.contains(c);
     }
-
 
     private boolean isSingleQuote(char c){
         return c == '\'';
@@ -163,6 +172,8 @@ public class Lexer {
         boolean isChar = false;
         boolean isString = false;
         boolean isScientificNotation = false;
+        boolean isComparisonOperator = false;
+        String combinedOperator = "";
         int lineLength = line.length();
 
         StringBuilder formedString = new StringBuilder();
@@ -180,6 +191,18 @@ public class Lexer {
 
             if(nextState == 19){
                 isScientificNotation = true;
+            }
+
+            if(isOperator(charRead)){
+                int nextCharIndex = index + 1;
+                if (nextCharIndex < line.length()){
+                    char nextCharRead = line.charAt(nextCharIndex);
+                    combinedOperator = new String(new  char[]{charRead, nextCharRead});
+                    if(comparisonOperatorSet.contains(combinedOperator)){
+                        index++;
+                        isComparisonOperator = true;
+                    }
+                }
             }
 
             if(isChar || isString){
@@ -236,13 +259,19 @@ public class Lexer {
             }
         } else if(stateErrorSet.contains(state)){
             Tokens.add(new Token(row,formedString.toString(),"ERROR"));
+            errorCount++;
         }
 
         if(isDelimiter(charRead)){
             Tokens.add(new Token(row,charRead+"", "DELIMITER"));
         }
         else if(isOperator(charRead) && !isScientificNotation){
-            Tokens.add(new Token(row,charRead+"", "OPERATOR"));
+            if (isComparisonOperator){
+                Tokens.add(new Token(row, combinedOperator, "OPERATOR"));
+            }else{
+                Tokens.add(new Token(row,charRead+"", "OPERATOR"));
+            }
+
         }
 
 

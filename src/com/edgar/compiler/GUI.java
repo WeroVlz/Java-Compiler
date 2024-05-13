@@ -11,12 +11,13 @@ import javax.swing.border.Border;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
 
 public class GUI implements ActionListener {
 
     private JFrame frame;
     private DefaultTableModel model;
-
+    private DefaultTreeModel parserTreeModel;
 
     public GUI() {
         initializeGui();
@@ -39,6 +40,9 @@ public class GUI implements ActionListener {
 
         JTextArea editor = new JTextArea();
         JTextArea console = new JTextArea();
+
+        EmptyBorder paddingBorder = new EmptyBorder(5, 5, 5, 5);
+        console.setBorder(paddingBorder);
 
         JMenuBar menuBar = createMenuBar(editor, console);
         JPanel mainPanel = createMainPanel(customFont, editor, console);
@@ -139,11 +143,14 @@ public class GUI implements ActionListener {
 
         runButton.addActionListener(
                 e -> {
-                    Lexer lexer = new Lexer(editor.getText(), console);
+                    Lexer lexer = new Lexer(editor.getText());
                     Vector<Token> tokens = lexer.getTokens();
-                    Parser.run(tokens);
+                    consoleOutput(console, tokens.size(), lexer.getRows(), lexer.getErrorCount());
                     model.setRowCount(0);
                     fillTable(model,tokens);
+                    DefaultMutableTreeNode treeRoot = Parser.run(tokens);
+                    fillParserTree(parserTreeModel, treeRoot);
+
                 }
         );
         return runButton;
@@ -204,9 +211,10 @@ public class GUI implements ActionListener {
 
         mainPanelC.add(editorScrollPane, gbc);
 
-        // ---------- Tabbed Pane --------------
+        // ------------------- Tabbed Pane -----------------
         JTabbedPane tabbedPane = new JTabbedPane();
 
+        // *** Lexical Analysis ***
         String[] columnNames = {"Line", "Word", "Token"};
         Object[][] data = {};
         model = new DefaultTableModel(data, columnNames);
@@ -215,28 +223,26 @@ public class GUI implements ActionListener {
         table.getTableHeader().setReorderingAllowed(false);
         JScrollPane variableExplorer = new JScrollPane(table);
         variableExplorer.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
-        DefaultMutableTreeNode testNode = new DefaultMutableTreeNode("Test Node");
-        DefaultMutableTreeNode testNode2 = new DefaultMutableTreeNode("Child");
-        testNode.add(testNode2);
-        JTree parserTree = new JTree(testNode);
+
+        // *** Parser Tree ***
+        parserTreeModel = new DefaultTreeModel(new DefaultMutableTreeNode("-"));
+        JTree parserTree = new JTree(parserTreeModel);
         JScrollPane parserTreeScrollable = new JScrollPane(parserTree);
         parserTreeScrollable.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
 
         setGbcData(gbc,1,0,0.4,0.66,1, 2);
-
-
-
 
         tabbedPane.add("Variable Explorer", variableExplorer);
         tabbedPane.add("Parser Tree", parserTreeScrollable);
 
         mainPanelC.add(tabbedPane, gbc);
 
-        // ---------- Console --------------
+        // --------------- Console ------------------
         console.setBackground(Color.BLACK);
         console.setForeground(Color.WHITE);
         console.setFont(customFont);
         console.setEditable(false);
+
         JScrollPane consoleScrollPane = new JScrollPane(console);
         setGbcData(gbc, 0,2,1.0,0.33,2,1);
         Border consoleBorder = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.BLACK), "Console");
@@ -253,11 +259,21 @@ public class GUI implements ActionListener {
 
     }
 
+    private void consoleOutput(JTextArea console, int numTokens, int rowCount, int errorCount){
+        console.setText("");
+        console.append(numTokens + " strings found in " + (rowCount-1) + " lines.\n");
+        console.append(errorCount + " strings do not match any rule.\n");
+        console.append("\nExecution finished");
+    }
 
     private void fillTable(DefaultTableModel model, Vector<Token> tokens){
         for(Token token: tokens){
             model.addRow(new Object[]{token.getRow(),token.getWord(),token.getToken()});
         }
+    }
+
+    private void fillParserTree(DefaultTreeModel treeModel, DefaultMutableTreeNode newRoot){
+        treeModel.setRoot(newRoot);
     }
 
     private void setGbcData(GridBagConstraints gbc, int gridX, int gridY, double weightX, double weightY, int gridW, int gridH){
