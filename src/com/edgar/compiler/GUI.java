@@ -223,17 +223,18 @@ public class GUI implements ActionListener {
         table.getTableHeader().setReorderingAllowed(false);
         JScrollPane variableExplorer = new JScrollPane(table);
         variableExplorer.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
-
         // *** Parser Tree ***
         parserTreeModel = new DefaultTreeModel(new DefaultMutableTreeNode("-"));
         JTree parserTree = new JTree(parserTreeModel);
         JScrollPane parserTreeScrollable = new JScrollPane(parserTree);
         parserTreeScrollable.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
 
-        setGbcData(gbc,1,0,0.4,0.66,1, 2);
+
 
         tabbedPane.add("Variable Explorer", variableExplorer);
         tabbedPane.add("Parser Tree", parserTreeScrollable);
+
+        setGbcData(gbc,1,0,0.4,0.66,1, 2);
 
         mainPanelC.add(tabbedPane, gbc);
 

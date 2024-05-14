@@ -9,11 +9,11 @@ public class Parser {
 
     private static Vector<Token> tokens;
     private static int currentToken;
-    static ArrayList<String> expression = new ArrayList<>();
     private static DefaultMutableTreeNode node;
+    private static boolean error;
 
     private static final List<String> RULE_R_OPERATORS = List.of(
-            "!=", "==","<", ">"
+            "!=", "==","<", ">", "<=", ">="
     );
 
     private static final List<String> RULE_E_OPERATORS = List.of(
@@ -27,9 +27,40 @@ public class Parser {
     public static DefaultMutableTreeNode run(Vector<Token> tokenVector){
         tokens = tokenVector;
         currentToken = 0;
-        DefaultMutableTreeNode root = new DefaultMutableTreeNode("Expression");
-        ruleExpression(root);
+        DefaultMutableTreeNode root = new DefaultMutableTreeNode("Parser Expression Tree");
+        ruleProgram(root);
         return root;
+    }
+
+    public static void ruleProgram(DefaultMutableTreeNode parent){
+        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("{")){
+            currentToken++;
+            ruleBody(parent);
+            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("}"))
+                currentToken++;
+            else{
+                System.out.println("Error: '}' expected.");
+            }
+        }else{
+            System.out.println("Error: '{' expected.");
+        }
+    }
+
+    public static void ruleBody(DefaultMutableTreeNode parent){
+        int expressionsCount = 1;
+        while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("}")){
+            node = new DefaultMutableTreeNode("Expression " + expressionsCount);
+            parent.add(node);
+            ruleExpression(node);
+            expressionsCount++;
+
+            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";")){
+                currentToken++;
+            }
+            else{
+                System.out.println("Error: ';' expected.");
+            }
+        }
     }
 
     public static void ruleExpression(DefaultMutableTreeNode parent){
@@ -145,7 +176,6 @@ public class Parser {
                 System.out.println("ERROR: 'Value' expected.");
             }
         } else {
-            expression.add("ERR");
             System.out.println("ERROR: 'Value' expected.");
         }
     }
