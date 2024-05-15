@@ -1,7 +1,6 @@
 package com.edgar.compiler;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
@@ -10,10 +9,17 @@ public class Parser {
     private static Vector<Token> tokens;
     private static int currentToken;
     private static DefaultMutableTreeNode node;
-    private static boolean error;
+
+    private static final List<String> RULE_X_OPERATORS = List.of(
+            "&", "&&"
+    );
+
+    private static final List<String> RULE_Y_OPERATORS = List.of(
+            "|","||"
+    );
 
     private static final List<String> RULE_R_OPERATORS = List.of(
-            "!=", "==","<", ">", "<=", ">="
+            "!=", "==","<", ">", "<=", ">=", "="
     );
 
     private static final List<String> RULE_E_OPERATORS = List.of(
@@ -68,8 +74,8 @@ public class Parser {
         parent.add(node);
         ruleX(node);
 
-        while(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("|")){
-            node = new DefaultMutableTreeNode("|");
+        while(currentToken < tokens.size() && RULE_X_OPERATORS.contains(tokens.get(currentToken).getWord())){
+            node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
             node = new DefaultMutableTreeNode("X"); parent.add(node);
 
@@ -82,8 +88,8 @@ public class Parser {
         parent.add(node);
         ruleY(node);
 
-        while(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("&")){
-            node = new DefaultMutableTreeNode("&");
+        while(currentToken < tokens.size() && RULE_Y_OPERATORS.contains(tokens.get(currentToken).getWord())){
+            node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
             node = new DefaultMutableTreeNode("Y"); parent.add(node);
 
