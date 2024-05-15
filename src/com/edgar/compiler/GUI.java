@@ -224,7 +224,7 @@ public class GUI implements ActionListener {
         JScrollPane variableExplorer = new JScrollPane(table);
         variableExplorer.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
         // *** Parser Tree ***
-        parserTreeModel = new DefaultTreeModel(new DefaultMutableTreeNode("-"));
+        parserTreeModel = new DefaultTreeModel(new DefaultMutableTreeNode("Parser Expression Tree"));
         JTree parserTree = new JTree(parserTreeModel);
         JScrollPane parserTreeScrollable = new JScrollPane(parserTree);
         parserTreeScrollable.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));

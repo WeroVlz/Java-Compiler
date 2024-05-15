@@ -30,6 +30,14 @@ public class Parser {
             "*", "/"
     );
 
+    private static final List<String> DECLARATION_KEYWORDS = List.of(
+            "int", "float", "boolean","char", "string", "void"
+    );
+
+    private static final List<String> KEYWORDS = List.of(
+            "print", "while", "if", "return"
+    );
+
     public static DefaultMutableTreeNode run(Vector<Token> tokenVector){
         tokens = tokenVector;
         currentToken = 0;
@@ -44,27 +52,41 @@ public class Parser {
             ruleBody(parent);
             if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("}"))
                 currentToken++;
-            else{
+            else
                 System.out.println("Error: '}' expected.");
-            }
         }else{
             System.out.println("Error: '{' expected.");
         }
     }
 
-    public static void ruleBody(DefaultMutableTreeNode parent){
+//    public static void ruleBody(DefaultMutableTreeNode parent){
+//        int expressionsCount = 1;
+//        while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("}")){
+//            node = new DefaultMutableTreeNode("Expression " + expressionsCount);
+//            parent.add(node);
+//            ruleExpression(node);
+//            expressionsCount++;
+//
+//            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";")){
+//                currentToken++;
+//            }
+//            else{
+//                System.out.println("Error: ';' expected.");
+//            }
+//        }
+//    }
+    public  static void ruleBody(DefaultMutableTreeNode parent){
         int expressionsCount = 1;
         while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("}")){
-            node = new DefaultMutableTreeNode("Expression " + expressionsCount);
-            parent.add(node);
-            ruleExpression(node);
-            expressionsCount++;
-
-            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";")){
-                currentToken++;
+            if(tokens.get(currentToken).getToken().equals("ID")){
+                //TO DO:
+                //ruleAssignment();
             }
-            else{
-                System.out.println("Error: ';' expected.");
+            else if(DECLARATION_KEYWORDS.contains(tokens.get(currentToken).getWord())){
+                //ruleVariable();
+            }
+            else if(KEYWORDS.contains(tokens.get(currentToken).getWord())){
+                //switch
             }
         }
     }
