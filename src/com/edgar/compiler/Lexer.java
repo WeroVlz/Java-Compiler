@@ -16,7 +16,7 @@ public class Lexer {
     );
 
     private static final List<String> COMPARISON_OPERATORS = List.of(
-        "!=", "==", "<=", ">=", "++", "--", "+=", "-=", "*=", "/="
+        "!=", "==", "<=", ">=", "++", "--", "+=", "-=", "*=", "/=", "&&", "||"
     );
 
     private static final List<Character> DELIMITERS = List.of(
