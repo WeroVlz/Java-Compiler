@@ -9,6 +9,7 @@ public class Parser {
     private static Vector<Token> tokens;
     private static int currentToken;
     private static DefaultMutableTreeNode node;
+    private static int expressionCount = 1;
 
     private static final List<String> RULE_X_OPERATORS = List.of(
             "&", "&&"
@@ -41,6 +42,7 @@ public class Parser {
     public static DefaultMutableTreeNode run(Vector<Token> tokenVector){
         tokens = tokenVector;
         currentToken = 0;
+        expressionCount = 1;
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Parser Expression Tree");
         ruleProgram(root);
         return root;
@@ -59,36 +61,127 @@ public class Parser {
         }
     }
 
-//    public static void ruleBody(DefaultMutableTreeNode parent){
-//        int expressionsCount = 1;
-//        while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("}")){
-//            node = new DefaultMutableTreeNode("Expression " + expressionsCount);
-//            parent.add(node);
-//            ruleExpression(node);
-//            expressionsCount++;
-//
-//            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";")){
-//                currentToken++;
-//            }
-//            else{
-//                System.out.println("Error: ';' expected.");
-//            }
-//        }
-//    }
     public  static void ruleBody(DefaultMutableTreeNode parent){
-        int expressionsCount = 1;
         while(currentToken < tokens.size() && !tokens.get(currentToken).getWord().equals("}")){
+            node = new DefaultMutableTreeNode("Expression " + expressionCount);
             if(tokens.get(currentToken).getToken().equals("ID")){
-                //TO DO:
-                //ruleAssignment();
+                parent.add(node);
+                ruleAssignment(node);
+                if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";"))
+                    currentToken++;
+                else
+                    System.out.println("Error: ';' expected.");
             }
             else if(DECLARATION_KEYWORDS.contains(tokens.get(currentToken).getWord())){
-                //ruleVariable();
+                ruleVariable();
+                if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";"))
+                    currentToken++;
+                else
+                    System.out.println("Error: ';' expected.");
             }
             else if(KEYWORDS.contains(tokens.get(currentToken).getWord())){
-                //switch
+                switch (tokens.get(currentToken).getWord()){
+                    case "print":
+                        parent.add(node);
+                        rulePrint(node);
+                        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";"))
+                            currentToken++;
+                        else
+                            System.out.println("Error: ';' expected.");
+                        break;
+                    case "while":
+                        parent.add(node);
+                        ruleWhile(node);
+                        break;
+                    case "if":
+                        parent.add(node);
+                        ruleIf(node);
+                        break;
+                    case "return":
+                        ruleReturn();
+                        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";"))
+                            currentToken++;
+                        else
+                            System.out.println("Error: ';' expected.");
+                        break;
+                }
             }
         }
+    }
+
+    public static void ruleAssignment(DefaultMutableTreeNode parent){
+        currentToken++;
+
+        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("="))
+            currentToken++;
+        else printErrorMessage("=");
+
+        ruleExpression(parent);
+        expressionCount++;
+    }
+
+    public static void ruleVariable(){
+        currentToken++;
+        if(currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("ID"))
+            currentToken++;
+        else printErrorMessage("Identifier");
+    }
+
+    public static void rulePrint(DefaultMutableTreeNode parent){
+        currentToken++;
+        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
+            currentToken++;
+        else printErrorMessage("(");
+
+        ruleExpression(parent);
+        expressionCount++;
+
+        if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")")){
+            currentToken++;
+        }else printErrorMessage(")");
+
+    }
+
+    public static void ruleWhile(DefaultMutableTreeNode parent){
+        currentToken++;
+
+        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
+            currentToken++;
+        else printErrorMessage("(");
+
+        ruleExpression(parent);
+        expressionCount++;
+
+        if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")"))
+            currentToken++;
+        else printErrorMessage(")");
+
+        ruleProgram((DefaultMutableTreeNode) parent.getRoot());
+    }
+
+    public static void ruleIf(DefaultMutableTreeNode parent){
+        currentToken++;
+        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
+            currentToken++;
+        else printErrorMessage("(");
+
+        ruleExpression(parent);
+        expressionCount++;
+
+        if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")"))
+            currentToken++;
+        else printErrorMessage(")");
+
+        ruleProgram(parent);
+
+        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("else")){
+            currentToken++;
+            ruleProgram(parent);
+        }
+    }
+
+    public static void ruleReturn(){
+        currentToken++;
     }
 
     public static void ruleExpression(DefaultMutableTreeNode parent){
@@ -190,6 +283,33 @@ public class Parser {
             } else if(token.getToken().equals("ID")){
                 node = new DefaultMutableTreeNode("Identifier(" + token.getWord() + ")");
                 parent.add(node); currentToken++;
+            } else if(token.getToken().equals("OCTAL")){
+                node = new DefaultMutableTreeNode("Octal(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
+            } else if(token.getToken().equals("HEX")){
+                node = new DefaultMutableTreeNode("Hexadecimal(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
+            } else if(token.getToken().equals("BINARY")){
+                node = new DefaultMutableTreeNode("Binary(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
+            } else if(token.getToken().equals("STRING")){
+                node = new DefaultMutableTreeNode("String(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
+            } else if(token.getToken().equals("CHAR")){
+                node = new DefaultMutableTreeNode("Char(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
+            } else if(token.getToken().equals("FLOAT")){
+                node = new DefaultMutableTreeNode("Float(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
+            } else if(token.getToken().equals("DOUBLE")){
+                node = new DefaultMutableTreeNode("Double(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
+            } else if(token.getWord().equals("true")){
+                node = new DefaultMutableTreeNode("Boolean(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
+            } else if(token.getWord().equals("false")){
+                node = new DefaultMutableTreeNode("Boolean(" + token.getWord() + ")");
+                parent.add(node); currentToken++;
             } else if(token.getWord().equals("(")){
                 node = new DefaultMutableTreeNode("(");
                 parent.add(node); currentToken++;
@@ -198,13 +318,17 @@ public class Parser {
                     node = new DefaultMutableTreeNode(")");
                     parent.add(node); currentToken++;
                 }else{
-                    System.out.println("ERROR: ')' expected.");
+                    printErrorMessage(")");
                 }
             } else {
-                System.out.println("ERROR: 'Value' expected.");
+                printErrorMessage("Value");
             }
         } else {
-            System.out.println("ERROR: 'Value' expected.");
+            printErrorMessage("Value");
         }
+    }
+
+    private static void printErrorMessage(String errorMessage){
+        System.out.println("ERROR: '" + errorMessage + "' expected.");
     }
 }
