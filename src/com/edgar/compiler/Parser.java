@@ -10,6 +10,7 @@ public class Parser {
     private static int currentToken;
     private static DefaultMutableTreeNode node;
     private static int expressionCount = 1;
+    private static GUI gui;
 
     private static final List<String> RULE_X_OPERATORS = List.of(
             "&", "&&"
@@ -39,8 +40,9 @@ public class Parser {
             "print", "while", "if", "return"
     );
 
-    public static DefaultMutableTreeNode run(Vector<Token> tokenVector){
+    public static DefaultMutableTreeNode run(Vector<Token> tokenVector, GUI userInterface){
         tokens = tokenVector;
+        gui = userInterface;
         currentToken = 0;
         expressionCount = 1;
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Parser Expression Tree");
@@ -55,9 +57,9 @@ public class Parser {
             if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("}"))
                 currentToken++;
             else
-                System.out.println("Error: '}' expected.");
+                errorHandler(2);
         }else{
-            System.out.println("Error: '{' expected.");
+            errorHandler(1);
         }
     }
 
@@ -70,14 +72,14 @@ public class Parser {
                 if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";"))
                     currentToken++;
                 else
-                    System.out.println("Error: ';' expected.");
+                    errorHandler(3);
             }
             else if(DECLARATION_KEYWORDS.contains(tokens.get(currentToken).getWord())){
                 ruleVariable();
                 if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";"))
                     currentToken++;
                 else
-                    System.out.println("Error: ';' expected.");
+                    errorHandler(3);
             }
             else if(KEYWORDS.contains(tokens.get(currentToken).getWord())){
                 switch (tokens.get(currentToken).getWord()){
@@ -87,7 +89,7 @@ public class Parser {
                         if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";"))
                             currentToken++;
                         else
-                            System.out.println("Error: ';' expected.");
+                            errorHandler(3);
                         break;
                     case "while":
                         parent.add(node);
@@ -98,11 +100,11 @@ public class Parser {
                         ruleIf(node);
                         break;
                     case "return":
-                        ruleReturn();
+                        ruleReturn(node);
                         if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(";"))
                             currentToken++;
                         else
-                            System.out.println("Error: ';' expected.");
+                            errorHandler(3);
                         break;
                 }
             }
@@ -114,7 +116,7 @@ public class Parser {
 
         if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("="))
             currentToken++;
-        else printErrorMessage("=");
+        else errorHandler(5);
 
         ruleExpression(parent);
         expressionCount++;
@@ -124,21 +126,21 @@ public class Parser {
         currentToken++;
         if(currentToken < tokens.size() && tokens.get(currentToken).getToken().equals("ID"))
             currentToken++;
-        else printErrorMessage("Identifier");
+        else errorHandler(6);
     }
 
     public static void rulePrint(DefaultMutableTreeNode parent){
         currentToken++;
         if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
             currentToken++;
-        else printErrorMessage("(");
+        else errorHandler(8);
 
         ruleExpression(parent);
         expressionCount++;
 
         if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")")){
             currentToken++;
-        }else printErrorMessage(")");
+        }else errorHandler(7);
 
     }
 
@@ -147,14 +149,14 @@ public class Parser {
 
         if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
             currentToken++;
-        else printErrorMessage("(");
+        else errorHandler(8);
 
         ruleExpression(parent);
         expressionCount++;
 
         if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")"))
             currentToken++;
-        else printErrorMessage(")");
+        else errorHandler(7);
 
         ruleProgram((DefaultMutableTreeNode) parent.getRoot());
     }
@@ -163,14 +165,14 @@ public class Parser {
         currentToken++;
         if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
             currentToken++;
-        else printErrorMessage("(");
+        else errorHandler(8);
 
         ruleExpression(parent);
         expressionCount++;
 
         if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")"))
             currentToken++;
-        else printErrorMessage(")");
+        else errorHandler(7);
 
         ruleProgram(parent);
 
@@ -180,8 +182,15 @@ public class Parser {
         }
     }
 
-    public static void ruleReturn(){
+    public static void ruleReturn(DefaultMutableTreeNode parent){
+        int returnLine = tokens.get(currentToken).getRow();
         currentToken++;
+        if ((currentToken >= tokens.size()) || tokens.get(currentToken).getWord().equals(";")
+                || (returnLine != tokens.get(currentToken).getRow())) {
+            return;
+        }
+        ruleExpression(parent);
+        expressionCount++;
     }
 
     public static void ruleExpression(DefaultMutableTreeNode parent){
@@ -318,17 +327,34 @@ public class Parser {
                     node = new DefaultMutableTreeNode(")");
                     parent.add(node); currentToken++;
                 }else{
-                    printErrorMessage(")");
+                    errorHandler(7);
                 }
             } else {
-                printErrorMessage("Value");
+                errorHandler(9);
             }
         } else {
-            printErrorMessage("Value");
+            errorHandler(9);
         }
     }
 
-    private static void printErrorMessage(String errorMessage){
-        System.out.println("ERROR: '" + errorMessage + "' expected.");
+    public static void errorHandler(int err){
+        int line;
+        if(tokens.isEmpty())
+            line = 1;
+        else {
+            line = tokens.get(currentToken-1).getRow();
+        }
+
+        switch (err){
+            case 1: gui.writeConsoleLine("Line " + line + ": expected '{'"); break;
+            case 2: gui.writeConsoleLine("Line " + line + ": expected '}'"); break;
+            case 3: gui.writeConsoleLine("Line " + line + ": expected ';'"); break;
+            case 4: gui.writeConsoleLine("Line " + line + ": expected 'identifier' or 'keyword'"); break;
+            case 5: gui.writeConsoleLine("Line " + line + ": expected '='"); break;
+            case 6: gui.writeConsoleLine("Line " + line + ": expected 'identifier'"); break;
+            case 7: gui.writeConsoleLine("Line " + line + ": expected ')'"); break;
+            case 8: gui.writeConsoleLine("Line " + line + ": expected '('"); break;
+            case 9: gui.writeConsoleLine("Line " + line + ": expected 'value', 'identifier' or '('"); break;
+        }
     }
 }

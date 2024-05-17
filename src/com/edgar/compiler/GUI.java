@@ -18,6 +18,7 @@ public class GUI implements ActionListener {
     private JFrame frame;
     private DefaultTableModel model;
     private DefaultTreeModel parserTreeModel;
+    private static JTextArea console;
 
     public GUI() {
         initializeGui();
@@ -28,8 +29,8 @@ public class GUI implements ActionListener {
 
         Font customFont = new Font("Consolas", Font.PLAIN, 22);
 
-        int frameWidth = (int) (screenSize.width * 0.7);
-        int frameHeight = (int) (screenSize.height * 0.75);
+        int frameWidth = (int) (screenSize.width * 0.8);
+        int frameHeight = (int) (screenSize.height * 0.8);
 
         frame = new JFrame();
         frame.setTitle("EVM Compiler");
@@ -39,20 +40,20 @@ public class GUI implements ActionListener {
         frame.setLocationRelativeTo(null);
 
         JTextArea editor = new JTextArea();
-        JTextArea console = new JTextArea();
+        console = new JTextArea(2,0);
 
         EmptyBorder paddingBorder = new EmptyBorder(5, 5, 5, 5);
         console.setBorder(paddingBorder);
 
-        JMenuBar menuBar = createMenuBar(editor, console);
-        JPanel mainPanel = createMainPanel(customFont, editor, console);
+        JMenuBar menuBar = createMenuBar(editor);
+        JPanel mainPanel = createMainPanel(customFont, editor);
 
         frame.setJMenuBar(menuBar);
         frame.add(mainPanel);
         frame.setVisible(true);
     }
 
-    public JMenuBar createMenuBar(JTextArea editor, JTextArea console) {
+    public JMenuBar createMenuBar(JTextArea editor) {
 
         JMenuBar menuBarC = new JMenuBar();
 
@@ -84,7 +85,7 @@ public class GUI implements ActionListener {
         fileMenu.addSeparator();
         fileMenu.add(openMenuItem);
 
-        JButton runButton = getRunButton(editor, console);
+        JButton runButton = getRunButton(editor);
 
         Box container = Box.createHorizontalBox();
         container.add(Box.createHorizontalGlue());
@@ -133,7 +134,7 @@ public class GUI implements ActionListener {
         return openMenuItem;
     }
 
-    private JButton getRunButton(JTextArea editor, JTextArea console) {
+    private JButton getRunButton(JTextArea editor) {
         JButton runButton = new JButton("Run");
         runButton.setBackground(new Color(28, 162, 56));
 
@@ -143,13 +144,22 @@ public class GUI implements ActionListener {
 
         runButton.addActionListener(
                 e -> {
+                    long startTime = System.nanoTime();
+                    console.setText("");
                     Lexer lexer = new Lexer(editor.getText());
                     Vector<Token> tokens = lexer.getTokens();
-                    consoleOutput(console, tokens.size(), lexer.getRows(), lexer.getErrorCount());
                     model.setRowCount(0);
                     fillTable(model,tokens);
-                    DefaultMutableTreeNode treeRoot = Parser.run(tokens);
+
+                    DefaultMutableTreeNode treeRoot = Parser.run(tokens, this);
                     fillParserTree(parserTreeModel, treeRoot);
+
+                    consoleOutput(console, tokens.size(), lexer.getRows(), lexer.getErrorCount());
+
+                    long endTime = System.nanoTime();
+                    long executionTime = endTime - startTime;
+
+                    console.append("\nExecution finished after: " + executionTime / 1000000 + " ms");
 
                 }
         );
@@ -194,7 +204,7 @@ public class GUI implements ActionListener {
     }
 
 
-    public JPanel createMainPanel(Font customFont, JTextArea editor, JTextArea console) {
+    public JPanel createMainPanel(Font customFont, JTextArea editor) {
 
         JPanel mainPanelC = new JPanel();
 
@@ -243,15 +253,17 @@ public class GUI implements ActionListener {
         console.setForeground(Color.WHITE);
         console.setFont(customFont);
         console.setEditable(false);
+        console.setLineWrap(true);
+        console.setWrapStyleWord(true);
 
         JScrollPane consoleScrollPane = new JScrollPane(console);
+        consoleScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
         setGbcData(gbc, 0,2,1.0,0.33,2,1);
         Border consoleBorder = BorderFactory.createTitledBorder(BorderFactory.createLineBorder(Color.BLACK), "Console");
         consoleScrollPane.setBorder(BorderFactory.createCompoundBorder(new EmptyBorder(0, 0, 0, 0), consoleBorder));
 
         mainPanelC.add(consoleScrollPane, gbc);
         return mainPanelC;
-
 
     }
 
@@ -261,10 +273,12 @@ public class GUI implements ActionListener {
     }
 
     private void consoleOutput(JTextArea console, int numTokens, int rowCount, int errorCount){
-        console.setText("");
-        console.append(numTokens + " strings found in " + (rowCount-1) + " lines.\n");
+        console.append("\n" + numTokens + " strings found in " + (rowCount-1) + " lines.\n");
         console.append(errorCount + " strings do not match any rule.\n");
-        console.append("\nExecution finished");
+    }
+
+    public void writeConsoleLine(String message){
+        console.append(message + "\n");
     }
 
     private void fillTable(DefaultTableModel model, Vector<Token> tokens){
