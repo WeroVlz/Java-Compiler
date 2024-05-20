@@ -8,7 +8,7 @@ public class Lexer {
             "if", "else", "when", "while", "do", "switch", "case", "print",
             "true", "false", "void", "private", "public", "protected", "boolean",
             "String", "int", "char", "float", "double","final","return","static",
-            "continue", "end"
+            "continue", "end","for"
     );
 
     private static final List<Character> OPERATORS = List.of(
