@@ -2,18 +2,18 @@ package com.edgar.compiler;
 
 public class Token {
 
-    private int row;
+    private int line;
     private String word;
     private String token;
 
     public Token(int row, String word, String token){
-        setRow(row);
+        setLine(row);
         setWord(word);
         setToken(token);
     }
 
-    public int getRow() {
-        return row;
+    public int getLine() {
+        return line;
     }
 
     public String getWord() {
@@ -25,8 +25,8 @@ public class Token {
     }
 
 
-    public void setRow(int row) {
-        this.row = row;
+    public void setLine(int line) {
+        this.line = line;
     }
 
     public void setWord(String word) {

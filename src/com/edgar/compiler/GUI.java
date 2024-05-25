@@ -286,7 +286,7 @@ public class GUI implements ActionListener {
 
     private void fillTable(DefaultTableModel model, Vector<Token> tokens){
         for(Token token: tokens){
-            model.addRow(new Object[]{token.getRow(),token.getWord(),token.getToken()});
+            model.addRow(new Object[]{token.getLine(),token.getWord(),token.getToken()});
         }
     }
 

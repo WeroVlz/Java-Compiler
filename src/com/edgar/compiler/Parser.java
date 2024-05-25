@@ -247,7 +247,7 @@ public class Parser {
             node = new DefaultMutableTreeNode("ASSIGNMENT");
             parent.add(node);
             ruleAssignment(node);
-            if(checkTokenWord(currentToken, ";")){
+            if(checkTokenWord(currentToken, ";") && isSameLine()){
                 node = new DefaultMutableTreeNode(";");
                 parent.add(node);
                 currentToken++;
@@ -259,7 +259,7 @@ public class Parser {
             node = new DefaultMutableTreeNode("VARIABLE");
             parent.add(node);
             ruleVariable(node);
-            if(checkTokenWord(currentToken, ";")){
+            if(checkTokenWord(currentToken, ";") && isSameLine()){
                 node = new DefaultMutableTreeNode(";");
                 parent.add(node);
                 currentToken++;
@@ -272,7 +272,7 @@ public class Parser {
                 case "print":
                     node = new DefaultMutableTreeNode("PRINT");
                     parent.add(node); rulePrint(node);
-                    if(checkTokenWord(currentToken, ";")){
+                    if(checkTokenWord(currentToken, ";") && isSameLine()){
                         node = new DefaultMutableTreeNode(";");
                         parent.add(node);
                         currentToken++;
@@ -291,7 +291,7 @@ public class Parser {
                 case "return":
                     node = new DefaultMutableTreeNode("RETURN");
                     parent.add(node); ruleReturn(node);
-                    if(checkTokenWord(currentToken, ";")){
+                    if(checkTokenWord(currentToken, ";") && isSameLine()){
                         node = new DefaultMutableTreeNode(";");
                         parent.add(node);
                         currentToken++;
@@ -302,7 +302,7 @@ public class Parser {
                 case "do":
                     node = new DefaultMutableTreeNode("DO");
                     parent.add(node); ruleDoWhile(node);
-                    if(checkTokenWord(currentToken, ";")){
+                    if(checkTokenWord(currentToken, ";") && isSameLine()){
                         node = new DefaultMutableTreeNode(";");
                         parent.add(node);
                         currentToken++;
@@ -364,14 +364,14 @@ public class Parser {
         }
         else errorHandler(6);
 
-        if(checkTokenWord(currentToken,"=")){
+        if(tokensExist() && checkTokenWord(currentToken,"=") && isSameLine()){
             node = new DefaultMutableTreeNode("=");
             parent.add(node);
             currentToken++;
         }
         else{
             errorHandler(5);
-            while (tokensExist() && !(isFirst("EXPRESSION") || isFollow("EXPRESSION") || checkTokenWord(currentToken,"}"))){
+            while (tokensExist() && isSameLine() && !(isFirst("EXPRESSION") || isFollow("EXPRESSION") || checkTokenWord(currentToken,"}"))){
                 if (isError(currentToken)){
                     node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
                     parent.add(node);
@@ -391,7 +391,7 @@ public class Parser {
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node);
             currentToken++;
-            if(checkTokenType(currentToken,"ID")){
+            if(tokensExist() && checkTokenType(currentToken,"ID") && isSameLine()){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
                 currentToken++;
@@ -399,7 +399,7 @@ public class Parser {
             else
                 errorHandler(6);
 
-            if(checkTokenWord(currentToken,"=")){
+            if(tokensExist() && checkTokenWord(currentToken,"=") && isSameLine()){
                 node = new DefaultMutableTreeNode("=");
                 parent.add(node);
                 currentToken++;
@@ -417,14 +417,14 @@ public class Parser {
             node = new DefaultMutableTreeNode("print");
             parent.add(node);
             currentToken++;
-            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("(")){
+            if(tokensExist() && checkTokenWord(currentToken,"(") && isSameLine()){
                 node = new DefaultMutableTreeNode("(");
                 parent.add(node);
                 currentToken++;
             }
             else{
                 errorHandler(8);
-                while(tokensExist() && !(isFirst("EXPRESSION") || checkTokenWord(currentToken,")") || checkTokenWord(currentToken,"}"))){
+                while(tokensExist() && isSameLine() && !(isFirst("EXPRESSION") || checkTokenWord(currentToken,")") || checkTokenWord(currentToken,"}"))){
                     if (isError(currentToken)){
                         node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
                         parent.add(node);
@@ -437,7 +437,7 @@ public class Parser {
             parent.add(node);
             ruleExpression(node);
 
-            if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")")){
+            if(tokensExist() && checkTokenWord(currentToken,")") && isSameLine()){
                 node = new DefaultMutableTreeNode(")");
                 parent.add(node);
                 currentToken++;
@@ -452,14 +452,14 @@ public class Parser {
             parent.add(node);
             currentToken++;
 
-            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("(")){
+            if(tokensExist() && checkTokenWord(currentToken,"(") && isSameLine()){
                 node = new DefaultMutableTreeNode("(");
                 parent.add(node);
                 currentToken++;
             }
             else{
                 errorHandler(8);
-                while (tokensExist() && !(isFirst("EXPRESSION") || isFirst("BODY")
+                while (tokensExist() && isSameLine() && !(isFirst("EXPRESSION") || isFirst("BODY")
                         || checkTokenWord(currentToken, ")") || isFollow("WHILE"))){
                     if (isError(currentToken)){
                         node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
@@ -473,7 +473,7 @@ public class Parser {
             parent.add(node);
             ruleExpression(node);
 
-            if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")")){
+            if(tokensExist() && isSameLine() && checkTokenWord(currentToken,")")) {
                 node = new DefaultMutableTreeNode(")");
                 parent.add(node);
                 currentToken++;
@@ -505,14 +505,14 @@ public class Parser {
             parent.add(node);
             currentToken++;
 
-            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("(")){
+            if(tokensExist() && checkTokenWord(currentToken,"(") && isSameLine()){
                 node = new DefaultMutableTreeNode("(");
                 parent.add(node);
                 currentToken++;
             }
             else{
                 errorHandler(8);
-                while (tokensExist() && !(isFirst("EXPRESSION") || isFirst("BODY")
+                while (tokensExist() &&  isSameLine() && !(isFirst("EXPRESSION") || isFirst("BODY")
                         || checkTokenWord(currentToken, ")") || isFollow("IF"))){
                     if (isError(currentToken)){
                         node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
@@ -526,7 +526,7 @@ public class Parser {
             parent.add(node);
             ruleExpression(node);
 
-            if(tokensExist() && checkTokenWord(currentToken,")")){
+            if(tokensExist() && checkTokenWord(currentToken,")") && isSameLine()){
                 node = new DefaultMutableTreeNode(")");
                 parent.add(node);
                 currentToken++;
@@ -565,7 +565,7 @@ public class Parser {
             parent.add(node);
             currentToken++;
 
-            if (tokensExist() && !checkTokenWord(currentToken, ";")){
+            if (tokensExist() && !checkTokenWord(currentToken, ";") && isSameLine()){
                 node = new DefaultMutableTreeNode("EXPRESSION");
                 parent.add(node);
                 ruleExpression(node);
@@ -600,7 +600,7 @@ public class Parser {
         }
         else errorHandler(11);
 
-        if(checkTokenWord(currentToken, "(")){
+        if(checkTokenWord(currentToken, "(") && isSameLine()){
             node = new DefaultMutableTreeNode("(");
             parent.add(node);
             currentToken++;
@@ -611,7 +611,7 @@ public class Parser {
         parent.add(node);
         ruleExpression(node);
 
-        if(checkTokenWord(currentToken, ")")) {
+        if(checkTokenWord(currentToken, ")") && isSameLine()) {
             node = new DefaultMutableTreeNode(")");
             parent.add(node);
             currentToken++;
@@ -628,14 +628,15 @@ public class Parser {
             parent.add(node);
             currentToken++;
 
-            if(checkTokenWord(currentToken,"(")){
+            if(checkTokenWord(currentToken,"(") && isSameLine()){
                 node = new DefaultMutableTreeNode("(");
                 parent.add(node);
                 currentToken++;
             }
             else
                 errorHandler(8);
-            if(searchTokenInList(currentToken,FOR_DECLARATION_KEYWORDS)){
+
+            if(searchTokenInList(currentToken,FOR_DECLARATION_KEYWORDS) && isSameLine()){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
                 currentToken++;
@@ -645,7 +646,7 @@ public class Parser {
             parent.add(node);
             ruleAssignment(node);
 
-            if(checkTokenWord(currentToken,";")){
+            if(checkTokenWord(currentToken,";") && isSameLine()){
                 node = new DefaultMutableTreeNode(";");
                 parent.add(node);
                 currentToken++;
@@ -657,7 +658,7 @@ public class Parser {
             parent.add(node);
             ruleExpression(node);
 
-            if(checkTokenWord(currentToken,";")){
+            if(checkTokenWord(currentToken,";") && isSameLine()){
                 node = new DefaultMutableTreeNode(";");
                 parent.add(node);
                 currentToken++;
@@ -665,7 +666,7 @@ public class Parser {
             else
                 errorHandler(3);
 
-            if(checkTokenWord(currentToken+1,"++") || checkTokenWord(currentToken+1,"--")){
+            if((checkTokenWord(currentToken+1,"++") || checkTokenWord(currentToken+1,"--")) && isSameLine()){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
                 currentToken++;
@@ -673,13 +674,15 @@ public class Parser {
                 parent.add(node);
                 currentToken++;
             }else {
-                node = new DefaultMutableTreeNode("ASSIGNMENT");
-                parent.add(node);
-                ruleAssignment(node);
+                if(isSameLine()){
+                    node = new DefaultMutableTreeNode("ASSIGNMENT");
+                    parent.add(node);
+                    ruleAssignment(node);
+                }
             }
 
 
-            if(checkTokenWord(currentToken,")")){
+            if(checkTokenWord(currentToken,")") && isSameLine()){
                 node = new DefaultMutableTreeNode(")");
                 parent.add(node);
                 currentToken++;
@@ -703,20 +706,20 @@ public class Parser {
             parent.add(node);
             currentToken++;
 
-            if(checkTokenWord(currentToken,"(")){
+            if(checkTokenWord(currentToken,"(") && isSameLine()){
                 node = new DefaultMutableTreeNode("(");
                 parent.add(node);
                 currentToken++;
             }
             else errorHandler(8);
 
-            if (checkTokenType(currentToken,"ID")){
+            if (checkTokenType(currentToken,"ID") && isSameLine()){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
                 currentToken++;
             }else errorHandler(6);
 
-            if(checkTokenWord(currentToken,")")){
+            if(checkTokenWord(currentToken,")") && isSameLine()){
                 node = new DefaultMutableTreeNode(")");
                 parent.add(node);
                 currentToken++;
@@ -767,25 +770,25 @@ public class Parser {
             caseNode.add(node);
             currentToken++;
 
-            if (checkTokenType(currentToken,"INT")){
+            if (checkTokenType(currentToken,"INT") && isSameLine()){
                 node = new DefaultMutableTreeNode("Integer (" + tokens.get(currentToken).getWord() + ")");
                 caseNode.add(node);
                 currentToken++;
-            } else if(checkTokenType(currentToken,"BINARY")){
+            } else if(checkTokenType(currentToken,"BINARY") && isSameLine()){
                 node = new DefaultMutableTreeNode("Binary (" + tokens.get(currentToken).getWord() + ")");
                 caseNode.add(node);
                 currentToken++;
-            }else if(checkTokenType(currentToken,"HEX")){
+            }else if(checkTokenType(currentToken,"HEX") && isSameLine()){
                 node = new DefaultMutableTreeNode("Hexadecimal (" + tokens.get(currentToken).getWord() + ")");
                 caseNode.add(node);
                 currentToken++;
-            }else if(checkTokenType(currentToken,"OCTAL")){
+            }else if(checkTokenType(currentToken,"OCTAL") && isSameLine()){
                 node = new DefaultMutableTreeNode("Octal (" + tokens.get(currentToken).getWord() + ")");
                 caseNode.add(node);
                 currentToken++;
             }else{
                 errorHandler(13);
-                while(tokensExist() && !(isFirst("PRINT") || isFirst("ASSIGNMENT") ||
+                while(tokensExist() && isSameLine() && !(isFirst("PRINT") || isFirst("ASSIGNMENT") ||
                         isFirst("VARIABLE") || isFirst("WHILE") || isFirst("IF") || isFirst("RETURN") ||
                         isFirst("DO") || isFirst( "FOR") || isFirst("SWITCH") || checkTokenWord(currentToken,"}") ||
                         checkTokenWord(currentToken, ":") || checkTokenWord(currentToken, "break"))) {
@@ -797,7 +800,7 @@ public class Parser {
                 }
             }
 
-            if (checkTokenWord(currentToken, ":")){
+            if (checkTokenWord(currentToken, ":") && isSameLine()){
                 node = new DefaultMutableTreeNode(":");
                 caseNode.add(node);
                 currentToken++;
@@ -827,7 +830,7 @@ public class Parser {
                 currentToken++;
             }else errorHandler(15);
 
-            if (checkTokenWord(currentToken,";")){
+            if (checkTokenWord(currentToken,";") && isSameLine()){
                 node = new DefaultMutableTreeNode(";");
                 caseNode.add(node);
                 currentToken++;
@@ -841,7 +844,7 @@ public class Parser {
             parent.add(node);
             currentToken++;
 
-            if (checkTokenWord(currentToken, ":")){
+            if (checkTokenWord(currentToken, ":") && isSameLine()){
                 node = new DefaultMutableTreeNode(":");
                 parent.add(node);
                 currentToken++;
@@ -871,7 +874,7 @@ public class Parser {
                 currentToken++;
             }else errorHandler(15);
 
-            if (checkTokenWord(currentToken,";")){
+            if (checkTokenWord(currentToken,";") && isSameLine()){
                 node = new DefaultMutableTreeNode(";");
                 parent.add(node);
                 currentToken++;
@@ -885,7 +888,7 @@ public class Parser {
         parent.add(node);
         ruleX(node);
 
-        while(currentToken < tokens.size() && RULE_X_OPERATORS.contains(tokens.get(currentToken).getWord())){
+        while(tokensExist() && searchTokenInList(currentToken,RULE_X_OPERATORS) && isSameLine()){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
             node = new DefaultMutableTreeNode("X");
@@ -900,7 +903,7 @@ public class Parser {
         parent.add(node);
         ruleY(node);
 
-        while(currentToken < tokens.size() && RULE_Y_OPERATORS.contains(tokens.get(currentToken).getWord())){
+        while(tokensExist() && searchTokenInList(currentToken, RULE_Y_OPERATORS) && isSameLine()){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
             node = new DefaultMutableTreeNode("Y");
@@ -912,7 +915,7 @@ public class Parser {
 
     public static void ruleY(DefaultMutableTreeNode parent){
 
-        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("!")){
+        if(tokensExist() && checkTokenWord(currentToken, "!") && isSameLine()){
             node = new DefaultMutableTreeNode("!");
             parent.add(node); currentToken++;
         }
@@ -926,7 +929,7 @@ public class Parser {
         parent.add(node);
         ruleE(node);
 
-        while(currentToken < tokens.size() && RULE_R_OPERATORS.contains(tokens.get(currentToken).getWord())){
+        while(tokensExist() && searchTokenInList(currentToken, RULE_R_OPERATORS) && isSameLine()){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
             node = new DefaultMutableTreeNode("E");
@@ -940,7 +943,7 @@ public class Parser {
         parent.add(node);
         ruleA(node);
 
-        while(currentToken < tokens.size() && RULE_E_OPERATORS.contains(tokens.get(currentToken).getWord())){
+        while(tokensExist() && searchTokenInList(currentToken, RULE_E_OPERATORS) && isSameLine()){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
             node = new DefaultMutableTreeNode("A");
@@ -954,7 +957,7 @@ public class Parser {
         parent.add(node);
         ruleB(node);
 
-        while(currentToken < tokens.size() && RULE_A_OPERATORS.contains(tokens.get(currentToken).getWord())){
+        while(tokensExist() && searchTokenInList(currentToken,RULE_A_OPERATORS) && isSameLine()){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
             node = new DefaultMutableTreeNode("B");
@@ -964,7 +967,7 @@ public class Parser {
     }
 
     public static void ruleB(DefaultMutableTreeNode parent){
-        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("-")){
+        if(tokensExist() && checkTokenWord(currentToken,"-") && isSameLine()){
             node = new DefaultMutableTreeNode("-");
             parent.add(node); currentToken++;
         }
@@ -975,7 +978,7 @@ public class Parser {
     }
 
     public static void ruleC(DefaultMutableTreeNode parent){
-        if(currentToken < tokens.size()){
+        if(tokensExist() && isSameLine()){
             Token token = tokens.get(currentToken);
             if(token.getToken().equals("INT")){
                 node = new DefaultMutableTreeNode("Integer (" + token.getWord() + ")");
@@ -1013,7 +1016,7 @@ public class Parser {
                 node = new DefaultMutableTreeNode("EXPRESSION");
                 parent.add(node);
                 ruleExpression(node);
-                if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(")")){
+                if(tokensExist() && checkTokenWord(currentToken,")")){
                     node = new DefaultMutableTreeNode(")");
                     parent.add(node); currentToken++;
                 }else{
@@ -1030,6 +1033,10 @@ public class Parser {
         } else {
             errorHandler(9);
         }
+    }
+
+    public static boolean isSameLine() {
+        return (tokens.get(currentToken).getLine() == tokens.get(currentToken - 1).getLine());
     }
 
     private static boolean isFirst(String rule){
@@ -1113,7 +1120,7 @@ public class Parser {
     }
 
     public static void errorHandler(int err){
-        int line = tokens.get(currentToken-1).getRow();
+        int line = tokens.get(currentToken-1).getLine();
 
         switch (err){
             case 1: gui.writeConsoleLine("Line " + line + ": expected type"); break;
