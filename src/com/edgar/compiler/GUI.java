@@ -273,7 +273,10 @@ public class GUI implements ActionListener {
     }
 
     private void consoleOutput(JTextArea console, int numTokens, int rowCount, int errorCount){
-        console.append("\n" + numTokens + " strings found in " + (rowCount-1) + " lines.\n");
+        if (!console.getText().isEmpty()){
+            console.append("\n");
+        }
+        console.append(numTokens + " strings found in " + (rowCount-1) + " lines.\n");
         console.append(errorCount + " strings do not match any rule.\n");
     }
 

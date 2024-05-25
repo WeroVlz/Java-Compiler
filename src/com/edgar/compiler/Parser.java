@@ -1,15 +1,14 @@
 package com.edgar.compiler;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-import java.util.List;
-import java.util.Vector;
+import java.util.*;
 
 public class Parser {
 
     private static Vector<Token> tokens;
     private static int currentToken;
+    private static boolean isSwitchBody;
     private static DefaultMutableTreeNode node;
-    private static int expressionCount = 1;
     private static GUI gui;
 
     private static final List<String> ACCESS_MODIFIER = List.of(
@@ -17,7 +16,7 @@ public class Parser {
     );
 
     private static final List<String> DECLARATION_KEYWORDS = List.of(
-            "int", "float", "boolean","char", "string", "void"
+            "int", "float", "boolean","char", "String", "void", "double"
     );
 
     private static final List<String> KEYWORDS = List.of(
@@ -48,22 +47,87 @@ public class Parser {
             "*", "/"
     );
 
+    private static final Map<String, List<String>> FIRST_SET = new HashMap<>() {{
+        put("PROGRAM", new ArrayList<>(List.of("public","private","protected","int","char","boolean","float","double","void","String")));
+        put("BODY", new ArrayList<>(List.of("{")));
+        put("METHOD", new ArrayList<>(List.of("public","private","protected")));
+        put("PARAMETER", new ArrayList<>(List.of("int","char","boolean","float","double","void","String")));
+        put("VARIABLE", new ArrayList<>(List.of("int","char","boolean","float","double","void","String")));
+        put("ASSIGNMENT", new ArrayList<>(List.of("ID")));
+        put("PRINT", new ArrayList<>(List.of("print")));
+        put("WHILE", new ArrayList<>(List.of("while")));
+        put("DO", new ArrayList<>(List.of("do")));
+        put("IF", new ArrayList<>(List.of("if")));
+        put("FOR", new ArrayList<>(List.of("for")));
+        put("SWITCH", new ArrayList<>(List.of("switch")));
+        put("CASE", new ArrayList<>(List.of("case")));
+        put("DEFAULT", new ArrayList<>(List.of("default")));
+        put("RETURN", new ArrayList<>(List.of("return")));
+        put("EXPRESSION", new ArrayList<>(List.of("!","-","(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
+        put("X", new ArrayList<>(List.of("!","-","(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
+        put("Y", new ArrayList<>(List.of("!","-","(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
+        put("R", new ArrayList<>(List.of("-","(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
+        put("E", new ArrayList<>(List.of("-","(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
+        put("A", new ArrayList<>(List.of("-","(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
+        put("B", new ArrayList<>(List.of("-","(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
+        put("C", new ArrayList<>(List.of("(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
+    }};
+
+    private static final Map<String, List<String>> FOLLOW_SET = new HashMap<>() {{
+        put("PROGRAM", new ArrayList<>(List.of()));
+        put("BODY", new ArrayList<>(List.of("public","private","protected","int","char","boolean","float","double","void","String","}",
+                "ID","print","while","if","return","do","for","switch","break","else")));
+        put("METHOD", new ArrayList<>(List.of("public","private","protected","int","char","boolean","float","double","void","String")));
+        put("PARAMETER", new ArrayList<>(List.of(")")));
+        put("VARIABLE", new ArrayList<>(List.of(";")));
+        put("ASSIGNMENT", new ArrayList<>(List.of(";",")")));
+        put("PRINT", new ArrayList<>(List.of(";")));
+        put("WHILE", new ArrayList<>(List.of("}","ID","int","char","boolean","float","double","void","String","print","while","if","return","do","for","switch","break")));
+        put("DO", new ArrayList<>(List.of("}","ID","int","char","boolean","float","double","void","String","print","while","if","return","do","for","switch","break")));
+        put("IF", new ArrayList<>(List.of("}","ID","int","char","boolean","float","double","void","String","print","while","if","return","do","for","switch","break")));
+        put("FOR", new ArrayList<>(List.of("}","ID","int","char","boolean","float","double","void","String","print","while","if","return","do","for","switch","break")));
+        put("SWITCH", new ArrayList<>(List.of("}","ID","int","char","boolean","float","double","void","String","print","while","if","return","do","for","switch","break")));
+        put("CASE", new ArrayList<>(List.of("default")));
+        put("DEFAULT", new ArrayList<>(List.of("}")));
+        put("RETURN", new ArrayList<>(List.of(";")));
+        put("EXPRESSION", new ArrayList<>(List.of(")",";",":")));
+        put("X", new ArrayList<>(List.of(")",";",":","|")));
+        put("Y", new ArrayList<>(List.of(")",";",":","|","||","&","&&")));
+        put("R", new ArrayList<>(List.of(")",";",":","|","||","&","&&")));
+        put("E", new ArrayList<>(List.of(")",";",":","|","||","&","&&","!=", "==","<", ">", "<=", ">=", "=")));
+        put("A", new ArrayList<>(List.of(")",";",":","|","||","&","&&","!=", "==","<", ">", "<=", ">=", "=","+","-")));
+        put("B", new ArrayList<>(List.of(")",";",":","|","||","&","&&","!=", "==","<", ">", "<=", ">=", "=","+","-","*","/")));
+        put("C", new ArrayList<>(List.of(")",";",":","|","||","&","&&","!=", "==","<", ">", "<=", ">=", "=","+","-","*","/")));
+    }};
+
     public static DefaultMutableTreeNode run(Vector<Token> tokenVector, GUI userInterface){
         tokens = tokenVector;
         gui = userInterface;
         currentToken = 0;
-        expressionCount = 1;
+        isSwitchBody = false;
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Parser Expression Tree");
         ruleProgram(root);
         return root;
     }
 
     public static void ruleProgram(DefaultMutableTreeNode parent){
-        while(currentToken < tokens.size()){
-            if(searchTokenInList(currentToken, ACCESS_MODIFIER))
-                ruleMethod(parent);
+        while(tokensExist()){
+            while (tokensExist() && !isFirst("METHOD") && !isFirst("VARIABLE")){
+                if(isError(currentToken)){
+                    node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                    parent.add(node);
+                }
+                currentToken++;
+            }
+            if(searchTokenInList(currentToken, ACCESS_MODIFIER)){
+                node = new DefaultMutableTreeNode("METHOD");
+                parent.add(node);
+                ruleMethod(node);
+            }
             else if (searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
-                ruleVariable(parent);
+                node = new DefaultMutableTreeNode("VARIABLE");
+                parent.add(node);
+                ruleVariable(node);
                 if(checkTokenWord(currentToken, ";"))
                     currentToken++;
                 else
@@ -73,363 +137,750 @@ public class Parser {
     }
 
     public static void ruleMethod(DefaultMutableTreeNode parent){
-        currentToken++;
 
-        if(checkTokenWord(currentToken,"static"))
+        if (tokensExist() && searchTokenInList(currentToken,ACCESS_MODIFIER)){
+            node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+            parent.add(node);
             currentToken++;
-        if(checkTokenWord(currentToken,"final"))
-            currentToken++;
 
-        if(searchTokenInList(currentToken, DECLARATION_KEYWORDS))
-            currentToken++;
-        else
-            errorHandler(1);
-
-        if(checkTokenType(currentToken, "ID"))
-            currentToken++;
-        else
-            errorHandler(6);
-
-        if(checkTokenWord(currentToken, "(")){
-            currentToken++;
-            if(searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
-                currentToken--;
-                ruleParameter();
-            }
-        }else
-            errorHandler(8);
-
-        if (checkTokenWord(currentToken, ")"))
-            currentToken++;
-        else
-            errorHandler(7);
-
-        ruleBody(parent);
-
-    }
-
-    public static void ruleParameter(){
-        do{
-            currentToken++;
-            if(searchTokenInList(currentToken, DECLARATION_KEYWORDS))
+            if(checkTokenWord(currentToken,"static")){
+                node = new DefaultMutableTreeNode("static");
+                parent.add(node);
                 currentToken++;
+            }
+
+            if(checkTokenWord(currentToken,"final")){
+                node = new DefaultMutableTreeNode("final");
+                parent.add(node);
+                currentToken++;
+            }
+
+            if(searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
+                currentToken++;
+            }
             else
                 errorHandler(1);
 
-            if(checkTokenType(currentToken,"ID"))
+            if(checkTokenType(currentToken, "ID")){
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
                 currentToken++;
+            }
             else
                 errorHandler(6);
-        }while(checkTokenWord(currentToken,","));
+
+            if(checkTokenWord(currentToken, "(")){
+                node = new DefaultMutableTreeNode("(");
+                parent.add(node);
+                currentToken++;
+            }else{
+                errorHandler(8);
+                while(tokensExist() && !(isFirst("PARAMETER") ||
+                        isFirst("BODY") || checkTokenWord(currentToken, ")"))){
+                    if(isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
+
+            if (isFirst("PARAMETER")){
+                node = new DefaultMutableTreeNode("PARAMETER");
+                parent.add(node);
+                ruleParameter(node);
+            }
+
+            if (checkTokenWord(currentToken, ")")){
+                node = new DefaultMutableTreeNode(")");
+                parent.add(node);
+                currentToken++;
+            }
+            else{
+                errorHandler(7);
+                while(tokensExist() && !(isFirst("BODY"))){
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
+
+            node = new DefaultMutableTreeNode("BODY");
+            parent.add(node);
+            ruleBody(node);
+        }
     }
 
-    public static void body(DefaultMutableTreeNode parent,DefaultMutableTreeNode node){
+    public static void ruleParameter(DefaultMutableTreeNode parent){
+        boolean isComma;
+        do{
+            isComma = false;
+            if (searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
+                currentToken++;
+            }
+            else errorHandler(1);
+
+            if (checkTokenType(currentToken, "ID")){
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
+                currentToken++;
+            }
+            else errorHandler(6);
+            if (checkTokenWord(currentToken,",")){
+                node = new DefaultMutableTreeNode(",");
+                parent.add(node);
+                currentToken++;
+                isComma = true;
+            }
+
+        }while(isComma);
+    }
+
+    public static void body(DefaultMutableTreeNode parent){
         if(checkTokenType(currentToken, "ID")){
+            node = new DefaultMutableTreeNode("ASSIGNMENT");
             parent.add(node);
             ruleAssignment(node);
-            if(checkTokenWord(currentToken, ";"))
+            if(checkTokenWord(currentToken, ";")){
+                node = new DefaultMutableTreeNode(";");
+                parent.add(node);
                 currentToken++;
+            }
             else
                 errorHandler(3);
         }
         else if(searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
-            ruleVariable(parent);
-            if(checkTokenWord(currentToken, ";"))
+            node = new DefaultMutableTreeNode("VARIABLE");
+            parent.add(node);
+            ruleVariable(node);
+            if(checkTokenWord(currentToken, ";")){
+                node = new DefaultMutableTreeNode(";");
+                parent.add(node);
                 currentToken++;
+            }
             else
                 errorHandler(3);
         }
         else if(searchTokenInList(currentToken, KEYWORDS)){
             switch (tokens.get(currentToken).getWord()){
                 case "print":
-                    parent.add(node);
-                    rulePrint(node);
-                    if(checkTokenWord(currentToken, ";"))
+                    node = new DefaultMutableTreeNode("PRINT");
+                    parent.add(node); rulePrint(node);
+                    if(checkTokenWord(currentToken, ";")){
+                        node = new DefaultMutableTreeNode(";");
+                        parent.add(node);
                         currentToken++;
+                    }
                     else
                         errorHandler(3);
                     break;
                 case "while":
-                    parent.add(node); ruleWhile(node); break;
+                    node = new DefaultMutableTreeNode("WHILE");
+                    parent.add(node); ruleWhile(node);
+                    break;
                 case "if":
-                    parent.add(node); ruleIf(node); break;
+                    node = new DefaultMutableTreeNode("IF");
+                    parent.add(node); ruleIf(node);
+                    break;
                 case "return":
-                    ruleReturn(node);
-                    if(checkTokenWord(currentToken, ";"))
+                    node = new DefaultMutableTreeNode("RETURN");
+                    parent.add(node); ruleReturn(node);
+                    if(checkTokenWord(currentToken, ";")){
+                        node = new DefaultMutableTreeNode(";");
+                        parent.add(node);
                         currentToken++;
+                    }
                     else
                         errorHandler(3);
                     break;
                 case "do":
-                    ruleDoWhile(parent);
-                    if(checkTokenWord(currentToken, ";"))
+                    node = new DefaultMutableTreeNode("DO");
+                    parent.add(node); ruleDoWhile(node);
+                    if(checkTokenWord(currentToken, ";")){
+                        node = new DefaultMutableTreeNode(";");
+                        parent.add(node);
                         currentToken++;
+                    }
                     else
                         errorHandler(3);
                     break;
                 case "for":
-                    ruleFor(parent); break;
+                    node = new DefaultMutableTreeNode("FOR");
+                    parent.add(node); ruleFor(node);
+                    break;
                 case "switch":
-                    ruleSwitch(parent); break;
+                    node = new DefaultMutableTreeNode("SWITCH");
+                    parent.add(node); ruleSwitch(node);
+                    break;
+            }
+        }else{
+            if(!isSwitchBody && !(checkTokenType(currentToken,"KEYWORD")))
+                errorHandler(4);
+            while(tokensExist() && !(isFirst("PRINT") || isFirst("ASSIGNMENT") ||
+                    isFirst("VARIABLE") || isFirst("WHILE") || isFirst("IF") || isFirst("RETURN") ||
+                    isFirst("DO") || isFirst( "FOR") || isFirst("SWITCH") || checkTokenWord(currentToken, "}") ||
+                    (checkTokenWord(currentToken,"break") && isSwitchBody))){
+                if (isError(currentToken)){
+                    node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                    parent.add(node);
+                }
+                currentToken++;
             }
         }
     }
 
     public  static void ruleBody(DefaultMutableTreeNode parent){
 
-        if(checkTokenWord(currentToken, "{"))
+        if(checkTokenWord(currentToken, "{")){
+            node = new DefaultMutableTreeNode("{");
+            parent.add(node);
             currentToken++;
-        else
-            errorHandler(10);
+        }
+        else  errorHandler(10);
 
-        while(currentToken < tokens.size() && !checkTokenWord(currentToken,"}")){
-            node = new DefaultMutableTreeNode("Expression " + expressionCount);
-            body(parent, node);
+        while(tokensExist() && !checkTokenWord(currentToken, "}")){
+            body(parent);
         }
 
-        if(checkTokenWord(currentToken, "}"))
+        if(checkTokenWord(currentToken, "}")){
+            node = new DefaultMutableTreeNode("}");
+            parent.add(node);
             currentToken++;
-        else
-            errorHandler(2);
+        }
+        else errorHandler(2);
     }
 
     public static void ruleAssignment(DefaultMutableTreeNode parent){
-        if(checkTokenType(currentToken,"ID"))
+        if(checkTokenType(currentToken,"ID")){
+            node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+            parent.add(node);
             currentToken++;
+        }
         else errorHandler(6);
 
-        if(checkTokenWord(currentToken,"="))
+        if(checkTokenWord(currentToken,"=")){
+            node = new DefaultMutableTreeNode("=");
+            parent.add(node);
             currentToken++;
-        else errorHandler(5);
+        }
+        else{
+            errorHandler(5);
+            while (tokensExist() && !(isFirst("EXPRESSION") || isFollow("EXPRESSION") || checkTokenWord(currentToken,"}"))){
+                if (isError(currentToken)){
+                    node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                    parent.add(node);
+                }
+                currentToken++;
+            }
+        }
 
-        ruleExpression(parent);
-        expressionCount++;
+        node = new DefaultMutableTreeNode("EXPRESSION");
+        parent.add(node);
+        ruleExpression(node);
+
     }
 
     public static void ruleVariable(DefaultMutableTreeNode parent){
-        currentToken++;
-        if(checkTokenType(currentToken,"ID"))
+        if(searchTokenInList(currentToken,DECLARATION_KEYWORDS)){
+            node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+            parent.add(node);
             currentToken++;
-        else
-            errorHandler(6);
+            if(checkTokenType(currentToken,"ID")){
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
+                currentToken++;
+            }
+            else
+                errorHandler(6);
 
-        if(checkTokenWord(currentToken,"=")){
-            currentToken++;
-            ruleExpression(parent);
+            if(checkTokenWord(currentToken,"=")){
+                node = new DefaultMutableTreeNode("=");
+                parent.add(node);
+                currentToken++;
+
+                node = new DefaultMutableTreeNode("EXPRESSION");
+                parent.add(node);
+                ruleExpression(node);
+            }
         }
     }
 
     public static void rulePrint(DefaultMutableTreeNode parent){
-        currentToken++;
-        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
+
+        if(checkTokenWord(currentToken,"print")){
+            node = new DefaultMutableTreeNode("print");
+            parent.add(node);
             currentToken++;
-        else errorHandler(8);
+            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("(")){
+                node = new DefaultMutableTreeNode("(");
+                parent.add(node);
+                currentToken++;
+            }
+            else{
+                errorHandler(8);
+                while(tokensExist() && !(isFirst("EXPRESSION") || checkTokenWord(currentToken,")") || checkTokenWord(currentToken,"}"))){
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
 
-        ruleExpression(parent);
-        expressionCount++;
+            node = new DefaultMutableTreeNode("EXPRESSION");
+            parent.add(node);
+            ruleExpression(node);
 
-        if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")")){
-            currentToken++;
-        }else errorHandler(7);
-
+            if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")")){
+                node = new DefaultMutableTreeNode(")");
+                parent.add(node);
+                currentToken++;
+            }else errorHandler(7);
+        }
     }
 
     public static void ruleWhile(DefaultMutableTreeNode parent){
-        currentToken++;
 
-        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
+        if(checkTokenWord(currentToken, "while")){
+            node = new DefaultMutableTreeNode("WHILE");
+            parent.add(node);
             currentToken++;
-        else errorHandler(8);
 
-        ruleExpression(parent);
-        expressionCount++;
+            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("(")){
+                node = new DefaultMutableTreeNode("(");
+                parent.add(node);
+                currentToken++;
+            }
+            else{
+                errorHandler(8);
+                while (tokensExist() && !(isFirst("EXPRESSION") || isFirst("BODY")
+                        || checkTokenWord(currentToken, ")") || isFollow("WHILE"))){
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
 
-        if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")"))
-            currentToken++;
-        else errorHandler(7);
+            node = new DefaultMutableTreeNode("EXPRESSION");
+            parent.add(node);
+            ruleExpression(node);
 
-        ruleBody((DefaultMutableTreeNode) parent.getRoot());
+            if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")")){
+                node = new DefaultMutableTreeNode(")");
+                parent.add(node);
+                currentToken++;
+            }
+            else{
+                errorHandler(7);
+                while(tokensExist() && !(isFirst("BODY") || isFollow("WHILE"))){
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
+
+            node = new DefaultMutableTreeNode("BODY");
+            parent.add(node);
+            ruleBody(node);
+        }
+
+
     }
 
     public static void ruleIf(DefaultMutableTreeNode parent){
-        currentToken++;
-        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("("))
+
+
+        if(checkTokenWord(currentToken, "if")){
+            node = new DefaultMutableTreeNode("IF");
+            parent.add(node);
             currentToken++;
-        else errorHandler(8);
 
-        ruleExpression(parent);
-        expressionCount++;
+            if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("(")){
+                node = new DefaultMutableTreeNode("(");
+                parent.add(node);
+                currentToken++;
+            }
+            else{
+                errorHandler(8);
+                while (tokensExist() && !(isFirst("EXPRESSION") || isFirst("BODY")
+                        || checkTokenWord(currentToken, ")") || isFollow("IF"))){
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
 
-        if(currentToken< tokens.size() && tokens.get(currentToken).getWord().equals(")"))
-            currentToken++;
-        else errorHandler(7);
+            node = new DefaultMutableTreeNode("EXPRESSION");
+            parent.add(node);
+            ruleExpression(node);
 
-        ruleBody(parent);
+            if(tokensExist() && checkTokenWord(currentToken,")")){
+                node = new DefaultMutableTreeNode(")");
+                parent.add(node);
+                currentToken++;
+            }
+            else {
+                errorHandler(7);
+                while (tokensExist() &&  !(checkTokenWord(currentToken,"else") || isFirst("BODY") || isFollow("IF"))){
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
 
-        if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals("else")){
-            currentToken++;
-            ruleBody(parent);
+            node = new DefaultMutableTreeNode("BODY");
+            parent.add(node);
+            ruleBody(node);
+
+            if(checkTokenWord(currentToken,"else")){
+                node = new DefaultMutableTreeNode("else");
+                parent.add(node);
+                currentToken++;
+
+                node = new DefaultMutableTreeNode("BODY");
+                parent.add(node);
+                ruleBody(node);
+            }
         }
+
     }
 
     public static void ruleReturn(DefaultMutableTreeNode parent){
-        int returnLine = tokens.get(currentToken).getRow();
-        currentToken++;
-        if ((currentToken >= tokens.size()) || tokens.get(currentToken).getWord().equals(";")
-                || (returnLine != tokens.get(currentToken).getRow())) {
-            return;
+        if (checkTokenWord(currentToken,"return")){
+            node = new DefaultMutableTreeNode("return");
+            parent.add(node);
+            currentToken++;
+
+            if (tokensExist() && !checkTokenWord(currentToken, ";")){
+                node = new DefaultMutableTreeNode("EXPRESSION");
+                parent.add(node);
+                ruleExpression(node);
+            }
         }
-        ruleExpression(parent);
-        expressionCount++;
     }
 
     public static void ruleDoWhile(DefaultMutableTreeNode parent){
-        currentToken++;
-        ruleBody(parent);
 
-        if(checkTokenWord(currentToken,"while"))
+        if (checkTokenWord(currentToken, "do")){
+            node = new DefaultMutableTreeNode("DO");
+            parent.add(node);
             currentToken++;
-        else
-            errorHandler(11);
 
-        if(checkTokenWord(currentToken, "("))
+            while(tokensExist() && !(isFirst("BODY") || isFollow("BODY") || checkTokenWord(currentToken,"}"))){
+                if (isError(currentToken)){
+                    node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                    parent.add(node);
+                }
+                currentToken++;
+            }
+        }
+
+        node = new DefaultMutableTreeNode("BODY");
+        parent.add(node);
+        ruleBody(node);
+
+        if(checkTokenWord(currentToken,"while")){
+            node = new DefaultMutableTreeNode("while");
+            parent.add(node);
             currentToken++;
-        else
-            errorHandler(8);
+        }
+        else errorHandler(11);
 
-        ruleExpression(parent);
-
-        if(checkTokenWord(currentToken, ")"))
+        if(checkTokenWord(currentToken, "(")){
+            node = new DefaultMutableTreeNode("(");
+            parent.add(node);
             currentToken++;
+        }
+        else errorHandler(8);
+
+        node = new DefaultMutableTreeNode("EXPRESSION");
+        parent.add(node);
+        ruleExpression(node);
+
+        if(checkTokenWord(currentToken, ")")) {
+            node = new DefaultMutableTreeNode(")");
+            parent.add(node);
+            currentToken++;
+        }
         else
             errorHandler(7);
 
     }
 
     public static void ruleFor(DefaultMutableTreeNode parent){
-        currentToken++;
 
-        if(checkTokenWord(currentToken,"("))
-            currentToken++;
-        else
-            errorHandler(8);
-
-        if(searchTokenInList(currentToken,FOR_DECLARATION_KEYWORDS))
+        if(checkTokenWord(currentToken,"for")){
+            node = new DefaultMutableTreeNode("FOR");
+            parent.add(node);
             currentToken++;
 
-        ruleAssignment(parent);
-
-        if(checkTokenWord(currentToken,";"))
-            currentToken++;
-        else
-            errorHandler(3);
-
-        ruleExpression(parent);
-
-        if(checkTokenWord(currentToken,";"))
-            currentToken++;
-        else
-            errorHandler(3);
-
-        if(checkTokenType(currentToken,"ID")){
-            currentToken++;
-            if(checkTokenWord(currentToken,"=")){
-                currentToken--;
-                ruleAssignment(parent);
-            }else{
-                if(checkTokenWord(currentToken,"++") || checkTokenWord(currentToken,"--"))
-                    currentToken++;
-                else
-                    errorHandler(12);
+            if(checkTokenWord(currentToken,"(")){
+                node = new DefaultMutableTreeNode("(");
+                parent.add(node);
+                currentToken++;
             }
+            else
+                errorHandler(8);
+            if(searchTokenInList(currentToken,FOR_DECLARATION_KEYWORDS)){
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
+                currentToken++;
+            }
+
+            node = new DefaultMutableTreeNode("ASSIGNMENT");
+            parent.add(node);
+            ruleAssignment(node);
+
+            if(checkTokenWord(currentToken,";")){
+                node = new DefaultMutableTreeNode(";");
+                parent.add(node);
+                currentToken++;
+            }
+            else
+                errorHandler(3);
+
+            node = new DefaultMutableTreeNode("EXPRESSION");
+            parent.add(node);
+            ruleExpression(node);
+
+            if(checkTokenWord(currentToken,";")){
+                node = new DefaultMutableTreeNode(";");
+                parent.add(node);
+                currentToken++;
+            }
+            else
+                errorHandler(3);
+
+            if(checkTokenWord(currentToken+1,"++") || checkTokenWord(currentToken+1,"--")){
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
+                currentToken++;
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
+                currentToken++;
+            }else {
+                node = new DefaultMutableTreeNode("ASSIGNMENT");
+                parent.add(node);
+                ruleAssignment(node);
+            }
+
+
+            if(checkTokenWord(currentToken,")")){
+                node = new DefaultMutableTreeNode(")");
+                parent.add(node);
+                currentToken++;
+            }
+            else
+                errorHandler(7);
+
+            node = new DefaultMutableTreeNode("BODY");
+            parent.add(node);
+            ruleBody(node);
         }
-
-        if(checkTokenWord(currentToken,")"))
-            currentToken++;
-        else errorHandler(7);
-
-        ruleBody(parent);
 
     }
 
     public static void ruleSwitch(DefaultMutableTreeNode parent){
-        currentToken++;
 
-        if(checkTokenWord(currentToken,"("))
+        if (checkTokenWord(currentToken,"switch")){
+            isSwitchBody = true;
+
+            node = new DefaultMutableTreeNode("switch");
+            parent.add(node);
             currentToken++;
-        else errorHandler(8);
 
-        ruleExpression(parent);
-
-        if(checkTokenWord(currentToken,")"))
-            currentToken++;
-        else errorHandler(7);
-
-        if(checkTokenWord(currentToken,"{"))
-            currentToken++;
-        else errorHandler(10);
-
-        while(currentToken < tokens.size() && !checkTokenWord(currentToken, "}") && !checkTokenWord(currentToken, "default")){
-            if(checkTokenWord(currentToken, "case"))
+            if(checkTokenWord(currentToken,"(")){
+                node = new DefaultMutableTreeNode("(");
+                parent.add(node);
                 currentToken++;
-            else errorHandler(13);
+            }
+            else errorHandler(8);
 
-            ruleExpression(parent);
-
-            if(checkTokenWord(currentToken, ":"))
+            if (checkTokenType(currentToken,"ID")){
+                node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                parent.add(node);
                 currentToken++;
-            else errorHandler(14);
+            }else errorHandler(6);
 
-            while(currentToken < tokens.size() && !checkTokenWord(currentToken,"break" )
-                    && !checkTokenWord(currentToken,"case")
-                    && !checkTokenWord(currentToken,"default")
-                    && !checkTokenWord(currentToken, "}")){
-                DefaultMutableTreeNode node = new DefaultMutableTreeNode("test");
-                body(parent, node);
+            if(checkTokenWord(currentToken,")")){
+                node = new DefaultMutableTreeNode(")");
+                parent.add(node);
+                currentToken++;
+            }
+            else errorHandler(7);
+
+            if(checkTokenWord(currentToken,"{")){
+                node = new DefaultMutableTreeNode("{");
+                parent.add(node);
+                currentToken++;
+            }
+            else {
+                errorHandler(10);
+                while (tokensExist() && !(isFirst("CASE") || isFirst("DEFAULT") || isFollow("DEFAULT"))){
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
             }
 
-            if(checkTokenWord(currentToken, "break"))
-                currentToken++;
-            else
-                errorHandler(15);
-
-            if(checkTokenWord(currentToken, ";"))
-                currentToken++;
-            else
-                errorHandler(3);
-
-        }
-
-        if(checkTokenWord(currentToken, "default")){
-            currentToken++;
-
-            if(checkTokenWord(currentToken, ":"))
-                currentToken++;
-            else errorHandler(14);
-
-            while(currentToken < tokens.size() && !checkTokenWord(currentToken, "break") && !checkTokenWord(currentToken, "}")){
-                DefaultMutableTreeNode node = new DefaultMutableTreeNode("test");
-                body(parent, node);
+            if(isFirst("CASE")){
+               ruleCase(parent);
             }
 
-            if(checkTokenWord(currentToken, "break"))
-                currentToken++;
-            else
-                errorHandler(15);
+            if(isFirst("DEFAULT")){
+                node = new DefaultMutableTreeNode("DEFAULT");
+                parent.add(node);
+                ruleDefault(node);
+            }
 
-            if(checkTokenWord(currentToken, ";"))
+            if(checkTokenWord(currentToken,"}")){
+                node = new DefaultMutableTreeNode("}");
+                parent.add(node);
                 currentToken++;
-            else
-                errorHandler(3);
+            }else errorHandler(2);
+
+            isSwitchBody = false;
         }
+    }
 
-        if(checkTokenWord(currentToken, "}"))
+    public static void ruleCase(DefaultMutableTreeNode parent){
+        while (tokensExist() && checkTokenWord(currentToken,"case")){
+            DefaultMutableTreeNode caseNode = new DefaultMutableTreeNode("CASE");
+            parent.add(caseNode);
+            node = new DefaultMutableTreeNode("case");
+            caseNode.add(node);
             currentToken++;
-        else errorHandler(2);
 
+            if (checkTokenType(currentToken,"INT")){
+                node = new DefaultMutableTreeNode("Integer (" + tokens.get(currentToken).getWord() + ")");
+                caseNode.add(node);
+                currentToken++;
+            } else if(checkTokenType(currentToken,"BINARY")){
+                node = new DefaultMutableTreeNode("Binary (" + tokens.get(currentToken).getWord() + ")");
+                caseNode.add(node);
+                currentToken++;
+            }else if(checkTokenType(currentToken,"HEX")){
+                node = new DefaultMutableTreeNode("Hexadecimal (" + tokens.get(currentToken).getWord() + ")");
+                caseNode.add(node);
+                currentToken++;
+            }else if(checkTokenType(currentToken,"OCTAL")){
+                node = new DefaultMutableTreeNode("Octal (" + tokens.get(currentToken).getWord() + ")");
+                caseNode.add(node);
+                currentToken++;
+            }else{
+                errorHandler(13);
+                while(tokensExist() && !(isFirst("PRINT") || isFirst("ASSIGNMENT") ||
+                        isFirst("VARIABLE") || isFirst("WHILE") || isFirst("IF") || isFirst("RETURN") ||
+                        isFirst("DO") || isFirst( "FOR") || isFirst("SWITCH") || checkTokenWord(currentToken,"}") ||
+                        checkTokenWord(currentToken, ":") || checkTokenWord(currentToken, "break"))) {
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        caseNode.add(node);
+                    }
+                    currentToken++;
+                }
+            }
+
+            if (checkTokenWord(currentToken, ":")){
+                node = new DefaultMutableTreeNode(":");
+                caseNode.add(node);
+                currentToken++;
+            }else{
+                errorHandler(14);
+                while(tokensExist() && !(isFirst("PRINT") || isFirst("ASSIGNMENT") ||
+                        isFirst("VARIABLE") || isFirst("WHILE") || isFirst("IF") || isFirst("RETURN") ||
+                        isFirst("DO") || isFirst( "FOR") || isFirst("SWITCH") ||
+                        checkTokenWord(currentToken, "break") || checkTokenWord(currentToken, "}"))) {
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        caseNode.add(node);
+                    }
+                    currentToken++;
+                }
+            }
+
+            DefaultMutableTreeNode bodyNode = new DefaultMutableTreeNode("BODY");
+            caseNode.add(bodyNode);
+            while(tokensExist() && !(checkTokenWord(currentToken, "}") || checkTokenWord(currentToken,"break"))){
+                body(bodyNode);
+            }
+
+            if (checkTokenWord(currentToken,"break")){
+                node = new DefaultMutableTreeNode("break");
+                caseNode.add(node);
+                currentToken++;
+            }else errorHandler(15);
+
+            if (checkTokenWord(currentToken,";")){
+                node = new DefaultMutableTreeNode(";");
+                caseNode.add(node);
+                currentToken++;
+            }else errorHandler(3);
+        }
+    }
+
+    public static void ruleDefault(DefaultMutableTreeNode parent){
+        if(checkTokenWord(currentToken,"default")){
+            node = new DefaultMutableTreeNode("default");
+            parent.add(node);
+            currentToken++;
+
+            if (checkTokenWord(currentToken, ":")){
+                node = new DefaultMutableTreeNode(":");
+                parent.add(node);
+                currentToken++;
+            }else{
+                errorHandler(14);
+                while(tokensExist() && !(isFirst("PRINT") || isFirst("ASSIGNMENT") ||
+                        isFirst("VARIABLE") || isFirst("WHILE") || isFirst("IF") || isFirst("RETURN") ||
+                        isFirst("DO") || isFirst( "FOR") || isFirst("SWITCH") ||
+                        checkTokenWord(currentToken, "break"))) {
+                    if (isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
+
+            DefaultMutableTreeNode bodyNode = new DefaultMutableTreeNode("BODY");
+            parent.add(bodyNode);
+            while(tokensExist() && !(checkTokenWord(currentToken, "}") || checkTokenWord(currentToken,"break"))){
+                body(bodyNode);
+            }
+
+            if (checkTokenWord(currentToken,"break")){
+                node = new DefaultMutableTreeNode("break");
+                parent.add(node);
+                currentToken++;
+            }else errorHandler(15);
+
+            if (checkTokenWord(currentToken,";")){
+                node = new DefaultMutableTreeNode(";");
+                parent.add(node);
+                currentToken++;
+            }else errorHandler(3);
+        }
     }
 
     public static void ruleExpression(DefaultMutableTreeNode parent){
+
         node = new DefaultMutableTreeNode("X");
         parent.add(node);
         ruleX(node);
@@ -437,7 +888,8 @@ public class Parser {
         while(currentToken < tokens.size() && RULE_X_OPERATORS.contains(tokens.get(currentToken).getWord())){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
-            node = new DefaultMutableTreeNode("X"); parent.add(node);
+            node = new DefaultMutableTreeNode("X");
+            parent.add(node);
 
             ruleX(node);
         }
@@ -451,7 +903,8 @@ public class Parser {
         while(currentToken < tokens.size() && RULE_Y_OPERATORS.contains(tokens.get(currentToken).getWord())){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
-            node = new DefaultMutableTreeNode("Y"); parent.add(node);
+            node = new DefaultMutableTreeNode("Y");
+            parent.add(node);
 
             ruleY(node);
         }
@@ -476,7 +929,8 @@ public class Parser {
         while(currentToken < tokens.size() && RULE_R_OPERATORS.contains(tokens.get(currentToken).getWord())){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
-            node = new DefaultMutableTreeNode("E"); parent.add(node);
+            node = new DefaultMutableTreeNode("E");
+            parent.add(node);
             ruleE(node);
         }
     }
@@ -489,7 +943,8 @@ public class Parser {
         while(currentToken < tokens.size() && RULE_E_OPERATORS.contains(tokens.get(currentToken).getWord())){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
-            node = new DefaultMutableTreeNode("A"); parent.add(node);
+            node = new DefaultMutableTreeNode("A");
+            parent.add(node);
             ruleA(node);
         }
     }
@@ -502,7 +957,8 @@ public class Parser {
         while(currentToken < tokens.size() && RULE_A_OPERATORS.contains(tokens.get(currentToken).getWord())){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node); currentToken++;
-            node = new DefaultMutableTreeNode("B"); parent.add(node);
+            node = new DefaultMutableTreeNode("B");
+            parent.add(node);
             ruleB(node);
         }
     }
@@ -521,44 +977,42 @@ public class Parser {
     public static void ruleC(DefaultMutableTreeNode parent){
         if(currentToken < tokens.size()){
             Token token = tokens.get(currentToken);
-            DefaultMutableTreeNode node;
             if(token.getToken().equals("INT")){
-                node = new DefaultMutableTreeNode("Integer(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("Integer (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("ID")){
-                node = new DefaultMutableTreeNode("Identifier(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("Identifier (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("OCTAL")){
-                node = new DefaultMutableTreeNode("Octal(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("Octal (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("HEX")){
-                node = new DefaultMutableTreeNode("Hexadecimal(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("Hexadecimal (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("BINARY")){
-                node = new DefaultMutableTreeNode("Binary(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("Binary (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("STRING")){
-                node = new DefaultMutableTreeNode("String(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("String (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("CHAR")){
-                node = new DefaultMutableTreeNode("Char(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("Char (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("FLOAT")){
-                node = new DefaultMutableTreeNode("Float(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("Float (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("DOUBLE")){
-                node = new DefaultMutableTreeNode("Double(" + token.getWord() + ")");
+                node = new DefaultMutableTreeNode("Double (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
-            } else if(token.getWord().equals("true")){
-                node = new DefaultMutableTreeNode("Boolean(" + token.getWord() + ")");
-                parent.add(node); currentToken++;
-            } else if(token.getWord().equals("false")){
-                node = new DefaultMutableTreeNode("Boolean(" + token.getWord() + ")");
+            } else if(token.getToken().equals("BOOLEAN")){
+                node = new DefaultMutableTreeNode("Boolean (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getWord().equals("(")){
                 node = new DefaultMutableTreeNode("(");
                 parent.add(node); currentToken++;
-                ruleExpression(parent);
+                node = new DefaultMutableTreeNode("EXPRESSION");
+                parent.add(node);
+                ruleExpression(node);
                 if(currentToken < tokens.size() && tokens.get(currentToken).getWord().equals(")")){
                     node = new DefaultMutableTreeNode(")");
                     parent.add(node); currentToken++;
@@ -567,24 +1021,88 @@ public class Parser {
                 }
             } else {
                 errorHandler(9);
+                if (isError(currentToken)){
+                    node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                    parent.add(node);
+                    currentToken++;
+                }
             }
         } else {
             errorHandler(9);
         }
     }
 
+    private static boolean isFirst(String rule){
+        final List<String> CHECK_WORD_RULES = List.of(
+                "PROGRAM","BODY","METHOD","PARAMETER","VARIABLE","PRINT",
+                "WHILE","DO","RETURN","IF","FOR","SWITCH","CASE","DEFAULT"
+        );
+
+        final List<String> FACTORIAL_RULES = List.of(
+                "EXPRESSION","X","Y"
+        );
+
+        List<String> currentRuleFirstSet = FIRST_SET.get(rule);
+
+        if(!tokensExist())
+            return false;
+
+        if(rule.equals("ASSIGNMENT")){
+            return currentRuleFirstSet.contains(tokens.get(currentToken).getToken());
+        }else if(CHECK_WORD_RULES.contains(rule)){
+            return currentRuleFirstSet.contains(tokens.get(currentToken).getWord());
+        }else{
+            if(checkTokenWord(currentToken,"("))
+                return true;
+            else if(checkTokenWord(currentToken,"-") && !rule.equals("C"))
+                return true;
+            else if(checkTokenWord(currentToken,"!") && FACTORIAL_RULES.contains(rule))
+                return true;
+
+            return currentRuleFirstSet.contains(tokens.get(currentToken).getToken());
+        }
+    }
+
+    private static boolean isFollow(String rule){
+        final List<String> CHECK_ID_RULES = List.of(
+                "BODY","WHILE","DO","IF","FOR","SWITCH"
+        );
+
+        List<String> currentRuleFollowSet = FOLLOW_SET.get(rule);
+
+        if (!tokensExist())
+            return false;
+
+        if(CHECK_ID_RULES.contains(rule)){
+            if(checkTokenType(currentToken,"ID")){
+                return true;
+            } else
+                return currentRuleFollowSet.contains(tokens.get(currentToken).getWord());
+        }else{
+            return currentRuleFollowSet.contains(tokens.get(currentToken).getWord());
+        }
+    }
+
     private static boolean checkTokenWord(int token, String word){
-        if(currentToken >= tokens.size()){
+        if(token >= tokens.size()){
             return false;
         }
         return tokens.get(token).getWord().equals(word);
     }
 
-    public static boolean checkTokenType(int token, String tokenType){
-        if(currentToken >= tokens.size()){
+    private static boolean checkTokenType(int token, String tokenType){
+        if(token >= tokens.size()){
             return false;
         }
         return tokens.get(token).getToken().equals(tokenType);
+    }
+
+    private static boolean tokensExist(){
+        return currentToken < tokens.size();
+    }
+
+    private static boolean isError(int token){
+        return checkTokenType(token,"ERROR");
     }
 
     private static boolean searchTokenInList(int token, List<String> tokenList){
@@ -610,11 +1128,9 @@ public class Parser {
             case 10: gui.writeConsoleLine("Line " + line + ": expected '{'"); break;
             case 11: gui.writeConsoleLine("Line " + line + ": expected 'while'"); break;
             case 12: gui.writeConsoleLine("Line " + line + ": expected assignment or operator"); break;
-            case 13: gui.writeConsoleLine("Line " + line + ": expected case label"); break;
+            case 13: gui.writeConsoleLine("Line " + line + ": expected value"); break;
             case 14: gui.writeConsoleLine("Line " + line + ": expected ':'"); break;
             case 15: gui.writeConsoleLine("Line " + line + ": expected break label"); break;
         }
     }
-
-
 }

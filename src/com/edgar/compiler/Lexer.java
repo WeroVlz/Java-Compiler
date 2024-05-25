@@ -6,9 +6,13 @@ public class Lexer {
 
     private static final List<String> KEYWORDS = List.of(
             "if", "else", "when", "while", "do", "switch", "case", "print",
-            "true", "false", "void", "private", "public", "protected", "boolean",
+            "void", "private", "public", "protected", "boolean",
             "String", "int", "char", "float", "double","final","return","static",
-            "continue", "end","for"
+            "continue", "end","for","break","default"
+    );
+
+    private static final List<String> BOOLEAN_KEYWORDS = List.of(
+            "true","false"
     );
 
     private static final List<Character> OPERATORS = List.of(
@@ -23,10 +27,6 @@ public class Lexer {
             '(',')','[',']','{','}',';',':',','
     );
 
-    private static final Set<String> keywordSet = new HashSet<>(KEYWORDS);
-    private static final Set<Character> operatorSet = new HashSet<>(OPERATORS);
-    private static final Set<Character> delimiterSet = new HashSet<>(DELIMITERS);
-    private static final Set<String> comparisonOperatorSet = new HashSet<>(COMPARISON_OPERATORS);
 
     private static final int DOLLAR_SIGN = 0;
     private static final int UNDERSCORE = 1;
@@ -115,11 +115,11 @@ public class Lexer {
     }
 
     private boolean isDelimiter(char c){
-        return delimiterSet.contains(c);
+        return DELIMITERS.contains(c);
     }
 
     private boolean isOperator(char c){
-        return operatorSet.contains(c);
+        return OPERATORS.contains(c);
     }
 
     private boolean isSingleQuote(char c){
@@ -198,7 +198,7 @@ public class Lexer {
                 if (nextCharIndex < line.length()){
                     char nextCharRead = line.charAt(nextCharIndex);
                     combinedOperator = new String(new  char[]{charRead, nextCharRead});
-                    if(comparisonOperatorSet.contains(combinedOperator)){
+                    if(COMPARISON_OPERATORS.contains(combinedOperator)){
                         index++;
                         isComparisonOperator = true;
                     }
@@ -251,9 +251,10 @@ public class Lexer {
         }else if(state == 15){
             Tokens.add(new Token(row,formedString.toString(),"CHAR"));
         }else if(state == 16){
-            if(keywordSet.contains(formedString.toString())){
+            if(KEYWORDS.contains(formedString.toString())){
                 Tokens.add(new Token(row,formedString.toString(),"KEYWORD"));
-
+            }else if(BOOLEAN_KEYWORDS.contains(formedString.toString())){
+                Tokens.add(new Token(row,formedString.toString(),"BOOLEAN"));
             }else{
                 Tokens.add(new Token(row, formedString.toString(), "ID"));
             }
