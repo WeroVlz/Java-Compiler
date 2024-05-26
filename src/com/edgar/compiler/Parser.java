@@ -14,7 +14,6 @@ public class Parser {
     private static final List<String> ACCESS_MODIFIER = List.of(
             "public", "private", "protected"
     );
-
     private static final List<String> DECLARATION_KEYWORDS = List.of(
             "int", "float", "boolean","char", "String", "void", "double"
     );
@@ -51,9 +50,12 @@ public class Parser {
         put("PROGRAM", new ArrayList<>(List.of("public","private","protected","int","char","boolean","float","double","void","String")));
         put("BODY", new ArrayList<>(List.of("{")));
         put("METHOD", new ArrayList<>(List.of("public","private","protected")));
-        put("PARAMETER", new ArrayList<>(List.of("int","char","boolean","float","double","void","String")));
+        put("CALLMETHOD", new ArrayList<>(List.of("ID")));
+        put("PARAMETER1", new ArrayList<>(List.of("int","char","boolean","float","double","void","String")));
+        put("PARAMETER2", new ArrayList<>(List.of("!","-","(","INT","OCTAL","HEX","BINARY","STRING","CHAR","FLOAT","DOUBLE","ID","BOOLEAN")));
         put("VARIABLE", new ArrayList<>(List.of("int","char","boolean","float","double","void","String")));
         put("ASSIGNMENT", new ArrayList<>(List.of("ID")));
+        put("ARRAY", new ArrayList<>(List.of("ID")));
         put("PRINT", new ArrayList<>(List.of("print")));
         put("WHILE", new ArrayList<>(List.of("while")));
         put("DO", new ArrayList<>(List.of("do")));
@@ -78,9 +80,12 @@ public class Parser {
         put("BODY", new ArrayList<>(List.of("public","private","protected","int","char","boolean","float","double","void","String","}",
                 "ID","print","while","if","return","do","for","switch","break","else")));
         put("METHOD", new ArrayList<>(List.of("public","private","protected","int","char","boolean","float","double","void","String")));
-        put("PARAMETER", new ArrayList<>(List.of(")")));
+        put("CALLMETHOD", new ArrayList<>(List.of(")",";",":","|","||","&","&&","!=", "==","<", ">", "<=", ">=", "=","+","-","*","/")));
+        put("PARAMETER1", new ArrayList<>(List.of(")")));
+        put("PARAMETER2", new ArrayList<>(List.of(")","}")));
         put("VARIABLE", new ArrayList<>(List.of(";")));
         put("ASSIGNMENT", new ArrayList<>(List.of(";",")")));
+        put("ARRAY", new ArrayList<>(List.of(")",";",":","|","||","&","&&","!=", "==","<", ">", "<=", ">=", "=","+","-","*","/")));
         put("PRINT", new ArrayList<>(List.of(";")));
         put("WHILE", new ArrayList<>(List.of("}","ID","int","char","boolean","float","double","void","String","print","while","if","return","do","for","switch","break")));
         put("DO", new ArrayList<>(List.of("}","ID","int","char","boolean","float","double","void","String","print","while","if","return","do","for","switch","break")));
@@ -90,7 +95,7 @@ public class Parser {
         put("CASE", new ArrayList<>(List.of("default")));
         put("DEFAULT", new ArrayList<>(List.of("}")));
         put("RETURN", new ArrayList<>(List.of(";")));
-        put("EXPRESSION", new ArrayList<>(List.of(")",";",":")));
+        put("EXPRESSION", new ArrayList<>(List.of(")",";",":","]","}")));
         put("X", new ArrayList<>(List.of(")",";",":","|")));
         put("Y", new ArrayList<>(List.of(")",";",":","|","||","&","&&")));
         put("R", new ArrayList<>(List.of(")",";",":","|","||","&","&&")));
@@ -177,7 +182,7 @@ public class Parser {
                 currentToken++;
             }else{
                 errorHandler(8);
-                while(tokensExist() && !(isFirst("PARAMETER") ||
+                while(tokensExist() && !(isFirst("PARAMETER1") ||
                         isFirst("BODY") || checkTokenWord(currentToken, ")"))){
                     if(isError(currentToken)){
                         node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
@@ -187,10 +192,10 @@ public class Parser {
                 }
             }
 
-            if (isFirst("PARAMETER")){
-                node = new DefaultMutableTreeNode("PARAMETER");
+            if (isFirst("PARAMETER1")){
+                node = new DefaultMutableTreeNode("PARAMETER1");
                 parent.add(node);
-                ruleParameter(node);
+                ruleParameter1(node);
             }
 
             if (checkTokenWord(currentToken, ")")){
@@ -215,7 +220,41 @@ public class Parser {
         }
     }
 
-    public static void ruleParameter(DefaultMutableTreeNode parent){
+    public static void ruleCallMethod(DefaultMutableTreeNode parent){
+      if (checkTokenType(currentToken, "ID")){
+          node = new DefaultMutableTreeNode("Identifier (" + tokens.get(currentToken).getWord() + ")");
+          parent.add(node);
+          currentToken++;
+
+          if (checkTokenWord(currentToken, "(")){
+              node = new DefaultMutableTreeNode("(");
+              parent.add(node);
+              currentToken++;
+          }else errorHandler(8);
+
+          while(tokensExist() && isSameLine() && !(isFirst("PARAMETER2") || isFollow("PARAMETER2"))){
+              if(isError(currentToken)){
+                  node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                  parent.add(node);
+              }
+              currentToken++;
+          }
+
+          if (isFirst("PARAMETER2")){
+              node = new DefaultMutableTreeNode("PARAMETER2");
+              parent.add(node);
+              ruleParameter2(node);
+          }
+
+          if (checkTokenWord(currentToken, ")")){
+              node = new DefaultMutableTreeNode("(");
+              parent.add(node);
+              currentToken++;
+          }else errorHandler(7);
+      }
+    }
+
+    public static void ruleParameter1(DefaultMutableTreeNode parent){
         boolean isComma;
         do{
             isComma = false;
@@ -232,6 +271,33 @@ public class Parser {
                 currentToken++;
             }
             else errorHandler(6);
+            if (checkTokenWord(currentToken,",")){
+                node = new DefaultMutableTreeNode(",");
+                parent.add(node);
+                currentToken++;
+                isComma = true;
+            }
+
+        }while(isComma);
+    }
+
+    public static void ruleParameter2(DefaultMutableTreeNode parent){
+        boolean isComma;
+        do{
+            isComma = false;
+
+            while (tokensExist() && isSameLine() && !(isFirst("EXPRESSION") || isFollow("EXPRESSION"))){
+                if(isError(currentToken)){
+                    node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                    parent.add(node);
+                }
+                currentToken++;
+            }
+
+            node = new DefaultMutableTreeNode("EXPRESSION");
+            parent.add(node);
+            ruleExpression(node);
+
             if (checkTokenWord(currentToken,",")){
                 node = new DefaultMutableTreeNode(",");
                 parent.add(node);
@@ -320,8 +386,6 @@ public class Parser {
                     break;
             }
         }else{
-            if(!isSwitchBody && !(checkTokenType(currentToken,"KEYWORD")))
-                errorHandler(4);
             while(tokensExist() && !(isFirst("PRINT") || isFirst("ASSIGNMENT") ||
                     isFirst("VARIABLE") || isFirst("WHILE") || isFirst("IF") || isFirst("RETURN") ||
                     isFirst("DO") || isFirst( "FOR") || isFirst("SWITCH") || checkTokenWord(currentToken, "}") ||
@@ -387,6 +451,7 @@ public class Parser {
     }
 
     public static void ruleVariable(DefaultMutableTreeNode parent){
+        boolean isArray = false;
         if(searchTokenInList(currentToken,DECLARATION_KEYWORDS)){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node);
@@ -396,18 +461,116 @@ public class Parser {
                 parent.add(node);
                 currentToken++;
             }
-            else
-                errorHandler(6);
+            else  errorHandler(6);
+
+            if (tokensExist() && checkTokenWord(currentToken, "[")){
+                isArray = true;
+                node = new DefaultMutableTreeNode("[");
+                parent.add(node);
+                currentToken++;
+
+                while(tokensExist() && isSameLine() && !(isFirst("EXPRESSION") || isFollow("EXPRESSION"))){
+                    if(isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+
+                node = new DefaultMutableTreeNode("EXPRESSION");
+                parent.add(node);
+                ruleExpression(node);
+
+                if (checkTokenWord(currentToken, "]")){
+                    node = new DefaultMutableTreeNode("]");
+                    parent.add(node);
+                    currentToken++;
+                }else errorHandler(17);
+            }
 
             if(tokensExist() && checkTokenWord(currentToken,"=") && isSameLine()){
                 node = new DefaultMutableTreeNode("=");
                 parent.add(node);
                 currentToken++;
 
-                node = new DefaultMutableTreeNode("EXPRESSION");
-                parent.add(node);
-                ruleExpression(node);
+                while(tokensExist() && isSameLine() && !(isFirst("EXPRESSION") || isFollow("EXPRESSION") ||
+                        checkTokenWord(currentToken,"{"))){
+                    if(isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+
+                if (isArray){
+                    if (checkTokenWord(currentToken,"{")){
+                        node = new DefaultMutableTreeNode("{");
+                        parent.add(node);
+                        currentToken++;
+                    }else errorHandler(10);
+
+
+                    while(tokensExist() && isSameLine() && !(isFirst("PARAMETER2") || isFollow("PARAMETER2"))){
+                        if(isError(currentToken)){
+                            node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                            parent.add(node);
+                        }
+                        currentToken++;
+                    }
+
+                    if (isFirst("PARAMETER2")){
+                        node = new DefaultMutableTreeNode("PARAMETER2");
+                        parent.add(node);
+                        ruleParameter2(node);
+                    }
+
+                    if (checkTokenWord(currentToken, "}")){
+                        node = new DefaultMutableTreeNode("}");
+                        parent.add(node);
+                        currentToken++;
+                    }else errorHandler(2);
+
+                }else{
+                    node = new DefaultMutableTreeNode("EXPRESSION");
+                    parent.add(node);
+                    ruleExpression(node);
+                }
             }
+        }
+    }
+
+    public static void ruleArray(DefaultMutableTreeNode parent){
+        if (checkTokenType(currentToken, "ID")){
+            node = new DefaultMutableTreeNode("Identifier (" + tokens.get(currentToken).getWord() + ")");
+            parent.add(node);
+            currentToken++;
+
+            if (checkTokenWord(currentToken, "[")){
+                node = new DefaultMutableTreeNode("[");
+                parent.add(node);
+                currentToken++;
+            }else{
+                errorHandler(16);
+                while(tokensExist() && isSameLine() && !(isFirst("EXPRESSION") || isFollow("EXPRESSION"))){
+                    if(isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+            }
+
+
+            node = new DefaultMutableTreeNode("EXPRESSION");
+            parent.add(node);
+            ruleExpression(node);
+
+
+            if (checkTokenWord(currentToken, "]")){
+                node = new DefaultMutableTreeNode("]");
+                parent.add(node);
+                currentToken++;
+            }else errorHandler(17);
         }
     }
 
@@ -984,8 +1147,18 @@ public class Parser {
                 node = new DefaultMutableTreeNode("Integer (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("ID")){
-                node = new DefaultMutableTreeNode("Identifier (" + token.getWord() + ")");
-                parent.add(node); currentToken++;
+                if (checkTokenWord(currentToken+1, "(")){
+                    node = new DefaultMutableTreeNode("CALLMETHOD");
+                    parent.add(node);
+                    ruleCallMethod(node);
+                }else if (checkTokenWord(currentToken+1,"[")){
+                    node = new DefaultMutableTreeNode("ARRAY");
+                    parent.add(node);
+                    ruleArray(node);
+                }else{
+                    node = new DefaultMutableTreeNode("Identifier (" + token.getWord() + ")");
+                    parent.add(node); currentToken++;
+                }
             } else if(token.getToken().equals("OCTAL")){
                 node = new DefaultMutableTreeNode("Octal (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
@@ -1041,12 +1214,12 @@ public class Parser {
 
     private static boolean isFirst(String rule){
         final List<String> CHECK_WORD_RULES = List.of(
-                "PROGRAM","BODY","METHOD","PARAMETER","VARIABLE","PRINT",
+                "PROGRAM","BODY","METHOD","PARAMETER1","VARIABLE","PRINT",
                 "WHILE","DO","RETURN","IF","FOR","SWITCH","CASE","DEFAULT"
         );
 
         final List<String> FACTORIAL_RULES = List.of(
-                "EXPRESSION","X","Y"
+                "PARAMETER2","EXPRESSION","X","Y"
         );
 
         List<String> currentRuleFirstSet = FIRST_SET.get(rule);
@@ -1109,7 +1282,13 @@ public class Parser {
     }
 
     private static boolean isError(int token){
-        return checkTokenType(token,"ERROR");
+        int line = tokens.get(currentToken-1).getLine();
+        if (checkTokenType(token,"ERROR")){
+            gui.writeConsoleLine("Line " + line + ": '" + tokens.get(token).getWord() + "' illegal statement");
+            return true;
+        }else{
+            return false;
+        }
     }
 
     private static boolean searchTokenInList(int token, List<String> tokenList){
@@ -1138,6 +1317,8 @@ public class Parser {
             case 13: gui.writeConsoleLine("Line " + line + ": expected value"); break;
             case 14: gui.writeConsoleLine("Line " + line + ": expected ':'"); break;
             case 15: gui.writeConsoleLine("Line " + line + ": expected break label"); break;
+            case 16: gui.writeConsoleLine("Line " + line + ": expected '['"); break;
+            case 17: gui.writeConsoleLine("Line " + line + ": expected ']'"); break;
         }
     }
 }
