@@ -5,6 +5,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.*;
+import java.util.Hashtable;
 import java.util.Vector;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.Border;
@@ -18,6 +19,7 @@ public class GUI implements ActionListener {
     private JFrame frame;
     private DefaultTableModel model;
     private DefaultTreeModel parserTreeModel;
+    private DefaultTableModel symbolModel;
     private static JTextArea console;
 
     public GUI() {
@@ -154,6 +156,11 @@ public class GUI implements ActionListener {
                     DefaultMutableTreeNode treeRoot = Parser.run(tokens, this);
                     fillParserTree(parserTreeModel, treeRoot);
 
+                    Hashtable<String, Vector<SymbolTableItem>> symbolTypes = SemanticAnalyzer.getSymbolTable();
+                    symbolModel.setRowCount(0);
+                    fillSymbolTypeTable(symbolModel,symbolTypes);
+                    SemanticAnalyzer.clearTable();
+
                     consoleOutput(console, tokens.size(), lexer.getRows(), lexer.getErrorCount());
 
                     long endTime = System.nanoTime();
@@ -225,24 +232,35 @@ public class GUI implements ActionListener {
         JTabbedPane tabbedPane = new JTabbedPane();
 
         // *** Lexical Analysis ***
-        String[] columnNames = {"Line", "Word", "Token"};
+        String[] lexerColumnNames = {"Line", "Word", "Token"};
         Object[][] data = {};
-        model = new DefaultTableModel(data, columnNames);
+        model = new DefaultTableModel(data, lexerColumnNames);
         JTable table = new JTable(model);
         table.setEnabled(false);
         table.getTableHeader().setReorderingAllowed(false);
         JScrollPane variableExplorer = new JScrollPane(table);
         variableExplorer.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
+
         // *** Parser Tree ***
         parserTreeModel = new DefaultTreeModel(new DefaultMutableTreeNode("Parser Expression Tree"));
         JTree parserTree = new JTree(parserTreeModel);
         JScrollPane parserTreeScrollable = new JScrollPane(parserTree);
         parserTreeScrollable.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
 
+        // ** Symbol Table
+        String[] symbolColumnNames = {"Name","Type", "Scope", "Value"};
+        Object[][] symbolData = {};
+        symbolModel = new DefaultTableModel(symbolData, symbolColumnNames);
+        JTable symbolTable = new JTable(symbolModel);
+        symbolTable.setEnabled(false);
+        symbolTable.getTableHeader().setReorderingAllowed(false);
+        JScrollPane symbolType = new JScrollPane(symbolTable);
+        symbolType.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
 
 
         tabbedPane.add("Variable Explorer", variableExplorer);
         tabbedPane.add("Parser Tree", parserTreeScrollable);
+        tabbedPane.add("Symbol Type Table", symbolType);
 
         setGbcData(gbc,1,0,0.4,0.66,1, 2);
 
@@ -292,6 +310,15 @@ public class GUI implements ActionListener {
 
     private void fillParserTree(DefaultTreeModel treeModel, DefaultMutableTreeNode newRoot){
         treeModel.setRoot(newRoot);
+    }
+
+    private void fillSymbolTypeTable(DefaultTableModel model, Hashtable<String,Vector<SymbolTableItem>> symbolTable){
+         for (String key : symbolTable.keySet()){
+             Vector<SymbolTableItem> variableDeclarations = symbolTable.get(key);
+             for(SymbolTableItem variable : variableDeclarations){
+                 model.addRow(new Object[]{key, variable.getType(), variable.getScope(), variable.getValue()});
+             }
+         }
     }
 
     private void setGbcData(GridBagConstraints gbc, int gridX, int gridY, double weightX, double weightY, int gridW, int gridH){

@@ -5,11 +5,15 @@ import java.util.*;
 
 public class Parser {
 
+    private static GUI gui;
     private static Vector<Token> tokens;
+    private static DefaultMutableTreeNode node;
     private static int currentToken;
     private static boolean isSwitchBody;
-    private static DefaultMutableTreeNode node;
-    private static GUI gui;
+    private static boolean isGlobal;
+    private static StringBuilder parameterTyping;
+    private static final Vector<ArrayList<String>> methodParameters = new Vector<>();
+
 
     private static final List<String> ACCESS_MODIFIER = List.of(
             "public", "private", "protected"
@@ -35,7 +39,7 @@ public class Parser {
     );
 
     private static final List<String> RULE_R_OPERATORS = List.of(
-            "!=", "==","<", ">", "<=", ">=", "="
+            "!=", "==","<", ">", "<=", ">="
     );
 
     private static final List<String> RULE_E_OPERATORS = List.of(
@@ -105,6 +109,15 @@ public class Parser {
         put("C", new ArrayList<>(List.of(")",";",":","|","||","&","&&","!=", "==","<", ">", "<=", ">=", "=","+","-","*","/")));
     }};
 
+    private static final Map<String, String> DEFAULT_VALUE = new HashMap<>() {{
+        put("int", "0");
+        put("float","0.0f");
+        put("double","0.0");
+        put("boolean","false");
+        put("char","");
+        put("String","");
+    }};
+
     public static DefaultMutableTreeNode run(Vector<Token> tokenVector, GUI userInterface){
         tokens = tokenVector;
         gui = userInterface;
@@ -132,7 +145,7 @@ public class Parser {
             else if (searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
                 node = new DefaultMutableTreeNode("VARIABLE");
                 parent.add(node);
-                ruleVariable(node);
+                ruleVariable(node, "global");
                 if(checkTokenWord(currentToken, ";"))
                     currentToken++;
                 else
@@ -142,7 +155,9 @@ public class Parser {
     }
 
     public static void ruleMethod(DefaultMutableTreeNode parent){
-
+        StringBuilder methodFirm = new StringBuilder();
+        String methodName = "";
+        String type = "";
         if (tokensExist() && searchTokenInList(currentToken,ACCESS_MODIFIER)){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node);
@@ -163,6 +178,7 @@ public class Parser {
             if(searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
+                type = tokens.get(currentToken).getWord();
                 currentToken++;
             }
             else
@@ -170,6 +186,7 @@ public class Parser {
 
             if(checkTokenType(currentToken, "ID")){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                methodName = tokens.get(currentToken).getWord();
                 parent.add(node);
                 currentToken++;
             }
@@ -202,6 +219,21 @@ public class Parser {
                 node = new DefaultMutableTreeNode(")");
                 parent.add(node);
                 currentToken++;
+                if (parameterTyping != null)
+                    methodFirm.append(methodName).append(parameterTyping);
+                else
+                    methodFirm.append(methodName);
+                SemanticAnalyzer.checkVariable(methodFirm.toString(), new SymbolTableItem(type,"function",""),
+                        tokens.get(currentToken).getLine(),gui);
+
+
+                    for (ArrayList<String> methodParameter : methodParameters) {
+                        SemanticAnalyzer.checkVariable(methodParameter.get(1),
+                                new SymbolTableItem(methodParameter.get(0), methodFirm.toString(), DEFAULT_VALUE.get(type)),
+                                tokens.get(currentToken).getLine(),gui);
+                    }
+
+
             }
             else{
                 errorHandler(7);
@@ -216,50 +248,55 @@ public class Parser {
 
             node = new DefaultMutableTreeNode("BODY");
             parent.add(node);
-            ruleBody(node);
+            ruleBody(node,methodFirm.toString());
         }
     }
 
     public static void ruleCallMethod(DefaultMutableTreeNode parent){
-      if (checkTokenType(currentToken, "ID")){
-          node = new DefaultMutableTreeNode("Identifier (" + tokens.get(currentToken).getWord() + ")");
-          parent.add(node);
-          currentToken++;
 
-          if (checkTokenWord(currentToken, "(")){
-              node = new DefaultMutableTreeNode("(");
-              parent.add(node);
-              currentToken++;
-          }else errorHandler(8);
+        if (checkTokenType(currentToken, "ID")){
+            node = new DefaultMutableTreeNode("Identifier (" + tokens.get(currentToken).getWord() + ")");
+            parent.add(node);
+            currentToken++;
 
-          while(tokensExist() && isSameLine() && !(isFirst("PARAMETER2") || isFollow("PARAMETER2"))){
-              if(isError(currentToken)){
-                  node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
-                  parent.add(node);
-              }
-              currentToken++;
-          }
+            if (checkTokenWord(currentToken, "(")){
+                node = new DefaultMutableTreeNode("(");
+                parent.add(node);
+                currentToken++;
+            }else errorHandler(8);
 
-          if (isFirst("PARAMETER2")){
-              node = new DefaultMutableTreeNode("PARAMETER2");
-              parent.add(node);
-              ruleParameter2(node);
-          }
+            while(tokensExist() && isSameLine() && !(isFirst("PARAMETER2") || isFollow("PARAMETER2"))){
+                if(isError(currentToken)){
+                    node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                    parent.add(node);
+                }
+                currentToken++;
+            }
 
-          if (checkTokenWord(currentToken, ")")){
-              node = new DefaultMutableTreeNode("(");
-              parent.add(node);
-              currentToken++;
-          }else errorHandler(7);
+            if (isFirst("PARAMETER2")){
+                node = new DefaultMutableTreeNode("PARAMETER2");
+                parent.add(node);
+                ruleParameter2(node);
+            }
+
+            if (checkTokenWord(currentToken, ")")){
+                node = new DefaultMutableTreeNode("(");
+                parent.add(node);
+                currentToken++;
+            }else errorHandler(7);
       }
     }
 
     public static void ruleParameter1(DefaultMutableTreeNode parent){
+        String type = "";
+        parameterTyping = new StringBuilder();
+        methodParameters.clear();
         boolean isComma;
         do{
             isComma = false;
             if (searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
+                type = tokens.get(currentToken).getWord();
                 parent.add(node);
                 currentToken++;
             }
@@ -268,6 +305,8 @@ public class Parser {
             if (checkTokenType(currentToken, "ID")){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
+                parameterTyping.append("-").append(type);
+                methodParameters.add(new ArrayList<>(List.of(type, tokens.get(currentToken).getWord())));
                 currentToken++;
             }
             else errorHandler(6);
@@ -308,7 +347,7 @@ public class Parser {
         }while(isComma);
     }
 
-    public static void body(DefaultMutableTreeNode parent){
+    public static void body(DefaultMutableTreeNode parent,String methodFirm){
         if(checkTokenType(currentToken, "ID")){
             node = new DefaultMutableTreeNode("ASSIGNMENT");
             parent.add(node);
@@ -324,7 +363,7 @@ public class Parser {
         else if(searchTokenInList(currentToken, DECLARATION_KEYWORDS)){
             node = new DefaultMutableTreeNode("VARIABLE");
             parent.add(node);
-            ruleVariable(node);
+            ruleVariable(node, methodFirm);
             if(checkTokenWord(currentToken, ";") && isSameLine()){
                 node = new DefaultMutableTreeNode(";");
                 parent.add(node);
@@ -348,11 +387,11 @@ public class Parser {
                     break;
                 case "while":
                     node = new DefaultMutableTreeNode("WHILE");
-                    parent.add(node); ruleWhile(node);
+                    parent.add(node); ruleWhile(node, methodFirm);
                     break;
                 case "if":
                     node = new DefaultMutableTreeNode("IF");
-                    parent.add(node); ruleIf(node);
+                    parent.add(node); ruleIf(node, methodFirm);
                     break;
                 case "return":
                     node = new DefaultMutableTreeNode("RETURN");
@@ -367,7 +406,7 @@ public class Parser {
                     break;
                 case "do":
                     node = new DefaultMutableTreeNode("DO");
-                    parent.add(node); ruleDoWhile(node);
+                    parent.add(node); ruleDoWhile(node, methodFirm);
                     if(checkTokenWord(currentToken, ";") && isSameLine()){
                         node = new DefaultMutableTreeNode(";");
                         parent.add(node);
@@ -378,11 +417,11 @@ public class Parser {
                     break;
                 case "for":
                     node = new DefaultMutableTreeNode("FOR");
-                    parent.add(node); ruleFor(node);
+                    parent.add(node); ruleFor(node, methodFirm);
                     break;
                 case "switch":
                     node = new DefaultMutableTreeNode("SWITCH");
-                    parent.add(node); ruleSwitch(node);
+                    parent.add(node); ruleSwitch(node, methodFirm);
                     break;
             }
         }else{
@@ -399,7 +438,7 @@ public class Parser {
         }
     }
 
-    public  static void ruleBody(DefaultMutableTreeNode parent){
+    public  static void ruleBody(DefaultMutableTreeNode parent, String methodFirm){
 
         if(checkTokenWord(currentToken, "{")){
             node = new DefaultMutableTreeNode("{");
@@ -409,7 +448,7 @@ public class Parser {
         else  errorHandler(10);
 
         while(tokensExist() && !checkTokenWord(currentToken, "}")){
-            body(parent);
+            body(parent, methodFirm);
         }
 
         if(checkTokenWord(currentToken, "}")){
@@ -450,8 +489,9 @@ public class Parser {
 
     }
 
-    public static void ruleVariable(DefaultMutableTreeNode parent){
+    public static void ruleVariable(DefaultMutableTreeNode parent, String scope){
         boolean isArray = false;
+        String type = "";
         if(searchTokenInList(currentToken,DECLARATION_KEYWORDS)){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node);
@@ -459,6 +499,10 @@ public class Parser {
             if(tokensExist() && checkTokenType(currentToken,"ID") && isSameLine()){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
+
+                type = tokens.get(currentToken-1).getWord();
+                SemanticAnalyzer.checkVariable(tokens.get(currentToken).getWord(),new SymbolTableItem(type,scope,DEFAULT_VALUE.get(type)),
+                        tokens.get(currentToken).getLine(),gui);
                 currentToken++;
             }
             else  errorHandler(6);
@@ -608,7 +652,7 @@ public class Parser {
         }
     }
 
-    public static void ruleWhile(DefaultMutableTreeNode parent){
+    public static void ruleWhile(DefaultMutableTreeNode parent, String methodFirm){
 
         if(checkTokenWord(currentToken, "while")){
             node = new DefaultMutableTreeNode("WHILE");
@@ -654,13 +698,13 @@ public class Parser {
 
             node = new DefaultMutableTreeNode("BODY");
             parent.add(node);
-            ruleBody(node);
+            ruleBody(node, methodFirm);
         }
 
 
     }
 
-    public static void ruleIf(DefaultMutableTreeNode parent){
+    public static void ruleIf(DefaultMutableTreeNode parent, String methodFirm){
 
 
         if(checkTokenWord(currentToken, "if")){
@@ -707,7 +751,7 @@ public class Parser {
 
             node = new DefaultMutableTreeNode("BODY");
             parent.add(node);
-            ruleBody(node);
+            ruleBody(node, methodFirm);
 
             if(checkTokenWord(currentToken,"else")){
                 node = new DefaultMutableTreeNode("else");
@@ -716,7 +760,7 @@ public class Parser {
 
                 node = new DefaultMutableTreeNode("BODY");
                 parent.add(node);
-                ruleBody(node);
+                ruleBody(node, methodFirm);
             }
         }
 
@@ -736,7 +780,7 @@ public class Parser {
         }
     }
 
-    public static void ruleDoWhile(DefaultMutableTreeNode parent){
+    public static void ruleDoWhile(DefaultMutableTreeNode parent, String methodFirm){
 
         if (checkTokenWord(currentToken, "do")){
             node = new DefaultMutableTreeNode("DO");
@@ -754,7 +798,7 @@ public class Parser {
 
         node = new DefaultMutableTreeNode("BODY");
         parent.add(node);
-        ruleBody(node);
+        ruleBody(node, methodFirm);
 
         if(checkTokenWord(currentToken,"while")){
             node = new DefaultMutableTreeNode("while");
@@ -784,7 +828,7 @@ public class Parser {
 
     }
 
-    public static void ruleFor(DefaultMutableTreeNode parent){
+    public static void ruleFor(DefaultMutableTreeNode parent, String methodFirm){
 
         if(checkTokenWord(currentToken,"for")){
             node = new DefaultMutableTreeNode("FOR");
@@ -855,12 +899,12 @@ public class Parser {
 
             node = new DefaultMutableTreeNode("BODY");
             parent.add(node);
-            ruleBody(node);
+            ruleBody(node, methodFirm);
         }
 
     }
 
-    public static void ruleSwitch(DefaultMutableTreeNode parent){
+    public static void ruleSwitch(DefaultMutableTreeNode parent, String methodFirm){
 
         if (checkTokenWord(currentToken,"switch")){
             isSwitchBody = true;
@@ -906,13 +950,13 @@ public class Parser {
             }
 
             if(isFirst("CASE")){
-               ruleCase(parent);
+               ruleCase(parent, methodFirm);
             }
 
             if(isFirst("DEFAULT")){
                 node = new DefaultMutableTreeNode("DEFAULT");
                 parent.add(node);
-                ruleDefault(node);
+                ruleDefault(node, methodFirm);
             }
 
             if(checkTokenWord(currentToken,"}")){
@@ -925,7 +969,7 @@ public class Parser {
         }
     }
 
-    public static void ruleCase(DefaultMutableTreeNode parent){
+    public static void ruleCase(DefaultMutableTreeNode parent, String methodFirm){
         while (tokensExist() && checkTokenWord(currentToken,"case")){
             DefaultMutableTreeNode caseNode = new DefaultMutableTreeNode("CASE");
             parent.add(caseNode);
@@ -984,7 +1028,7 @@ public class Parser {
             DefaultMutableTreeNode bodyNode = new DefaultMutableTreeNode("BODY");
             caseNode.add(bodyNode);
             while(tokensExist() && !(checkTokenWord(currentToken, "}") || checkTokenWord(currentToken,"break"))){
-                body(bodyNode);
+                body(bodyNode, methodFirm);
             }
 
             if (checkTokenWord(currentToken,"break")){
@@ -1001,7 +1045,7 @@ public class Parser {
         }
     }
 
-    public static void ruleDefault(DefaultMutableTreeNode parent){
+    public static void ruleDefault(DefaultMutableTreeNode parent, String methodFirm){
         if(checkTokenWord(currentToken,"default")){
             node = new DefaultMutableTreeNode("default");
             parent.add(node);
@@ -1028,7 +1072,7 @@ public class Parser {
             DefaultMutableTreeNode bodyNode = new DefaultMutableTreeNode("BODY");
             parent.add(bodyNode);
             while(tokensExist() && !(checkTokenWord(currentToken, "}") || checkTokenWord(currentToken,"break"))){
-                body(bodyNode);
+                body(bodyNode, methodFirm);
             }
 
             if (checkTokenWord(currentToken,"break")){
