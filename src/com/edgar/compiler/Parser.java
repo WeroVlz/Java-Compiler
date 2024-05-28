@@ -10,7 +10,6 @@ public class Parser {
     private static DefaultMutableTreeNode node;
     private static int currentToken;
     private static boolean isSwitchBody;
-    private static boolean isGlobal;
     private static StringBuilder parameterTyping;
     private static final Vector<ArrayList<String>> methodParameters = new Vector<>();
 
@@ -491,7 +490,7 @@ public class Parser {
 
     public static void ruleVariable(DefaultMutableTreeNode parent, String scope){
         boolean isArray = false;
-        String type = "";
+        String type;
         if(searchTokenInList(currentToken,DECLARATION_KEYWORDS)){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node);

@@ -5,7 +5,6 @@ import java.util.Vector;
 
 public class SemanticAnalyzer {
 
-    private static GUI gui;
     private static final Hashtable<String, Vector<SymbolTableItem>> symbolTable = new Hashtable<>();
 
     private static final int INT = 0;
@@ -21,7 +20,7 @@ public class SemanticAnalyzer {
     private static final int OP_EQ_NOTEQ = 2;
     private static final int OP_MORE_LESS_EQ = 3;
     private static final int OP_PLUS = 4;
-    private static final int OP_MIN_DIV_MULT = 5;
+    private static final int OP_MIN_DIV_MUL = 5;
     private static final int OP_NEG = 6;
 
     private static final String[][][] OPERATORS_CUBE = {
@@ -77,7 +76,7 @@ public class SemanticAnalyzer {
             }
     };
 
-    public static Hashtable<String, Vector<SymbolTableItem>> getSymbolTable(){ return symbolTable; };
+    public static Hashtable<String, Vector<SymbolTableItem>> getSymbolTable(){ return symbolTable; }
 
     public static void clearTable(){ symbolTable.clear(); }
 
