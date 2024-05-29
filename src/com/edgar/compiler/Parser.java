@@ -1127,7 +1127,11 @@ public class Parser {
 
             String var1 = SemanticAnalyzer.popStack();
             String var2 = SemanticAnalyzer.popStack();
-            SemanticAnalyzer.pushStack(SemanticAnalyzer.calculateOperatorCube(operator,var1,var2));
+            String result = SemanticAnalyzer.calculateOperatorCube(operator,var1,var2);
+            SemanticAnalyzer.pushStack(result);
+
+            if (result.equals("error"))
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),6);
         }
     }
 
@@ -1148,7 +1152,11 @@ public class Parser {
 
             String var1 = SemanticAnalyzer.popStack();
             String var2 = SemanticAnalyzer.popStack();
-            SemanticAnalyzer.pushStack(SemanticAnalyzer.calculateOperatorCube(operator,var1,var2));
+            String result = SemanticAnalyzer.calculateOperatorCube(operator,var1,var2);
+            SemanticAnalyzer.pushStack(result);
+
+            if (result.equals("error"))
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),6);
 
 
         }
@@ -1168,7 +1176,11 @@ public class Parser {
 
         if (operatorUsed){
             String var = SemanticAnalyzer.popStack();
-            SemanticAnalyzer.pushStack(SemanticAnalyzer.calculateOperatorCube("!",var));
+            String result = SemanticAnalyzer.calculateOperatorCube("!",var);
+            SemanticAnalyzer.pushStack(result);
+
+            if(result.equals("error"))
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),5);
         }
     }
 
@@ -1189,7 +1201,11 @@ public class Parser {
 
             String var1 = SemanticAnalyzer.popStack();
             String var2 = SemanticAnalyzer.popStack();
-            SemanticAnalyzer.pushStack(SemanticAnalyzer.calculateOperatorCube(operator,var1,var2));
+            String result = SemanticAnalyzer.calculateOperatorCube(operator,var1,var2);
+            SemanticAnalyzer.pushStack(result);
+
+            if (result.equals("error"))
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),6);
         }
     }
 
@@ -1210,7 +1226,11 @@ public class Parser {
 
             String var1 = SemanticAnalyzer.popStack();
             String var2 = SemanticAnalyzer.popStack();
-            SemanticAnalyzer.pushStack(SemanticAnalyzer.calculateOperatorCube(operator,var1,var2));
+            String result = SemanticAnalyzer.calculateOperatorCube(operator,var1,var2);
+            SemanticAnalyzer.pushStack(result);
+
+            if (result.equals("error"))
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),6);
         }
     }
 
@@ -1231,7 +1251,11 @@ public class Parser {
 
             String var1 = SemanticAnalyzer.popStack();
             String var2 = SemanticAnalyzer.popStack();
-            SemanticAnalyzer.pushStack(SemanticAnalyzer.calculateOperatorCube(operator,var1,var2));
+            String result = SemanticAnalyzer.calculateOperatorCube(operator,var1,var2);
+            SemanticAnalyzer.pushStack(result);
+
+            if (result.equals("error"))
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),6);
 
         }
     }
@@ -1250,7 +1274,11 @@ public class Parser {
 
         if (operatorUsed){
             String var = SemanticAnalyzer.popStack();
-            SemanticAnalyzer.pushStack(SemanticAnalyzer.calculateOperatorCube("-",var));
+            String result = SemanticAnalyzer.calculateOperatorCube("-",var);
+            SemanticAnalyzer.pushStack(result);
+
+            if(result.equals("error"))
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),6);
         }
     }
 

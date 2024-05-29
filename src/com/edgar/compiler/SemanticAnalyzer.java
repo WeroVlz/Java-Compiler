@@ -138,7 +138,7 @@ public class SemanticAnalyzer {
         if(!symbolTable.containsKey(id)){
             errorHandler(id,line,2);
         }
-    };
+    }
 
     public static String getTypeById(String id, int line){
         Vector<SymbolTableItem> idDeclarations = symbolTable.get(id);
@@ -157,7 +157,7 @@ public class SemanticAnalyzer {
       }else{
           return OPERATORS_CUBE[2][0][7];
       }
-    };
+    }
 
     public static String calculateOperatorCube(String operator, String variable1, String variable2){
         int operatorCube = switch (operator) {
@@ -169,8 +169,9 @@ public class SemanticAnalyzer {
             case "=" -> OP_ASSIGN;
             default -> 0;
         };
-
-        return OPERATORS_CUBE[operatorCube][VARIABLE_TYPES.get(variable1)][VARIABLE_TYPES.get(variable2)];
+        if (!variable2.isEmpty())
+            return OPERATORS_CUBE[operatorCube][VARIABLE_TYPES.get(variable1)][VARIABLE_TYPES.get(variable2)];
+        else return "error";
     }
 
     public static void errorHandler(String id, int line, int err){
@@ -180,6 +181,8 @@ public class SemanticAnalyzer {
             case 2 -> gui.writeConsoleLine("Line " + line + ": variable '" + id + "' was never declared");
             case 3 -> gui.writeConsoleLine("Line " + line + ": variable '" + id + "' was not found");
             case 4 -> gui.writeConsoleLine("Line " + line + ": incompatible types: type mismatch");
+            case 5 -> gui.writeConsoleLine("Line " + line + ": incompatible types: expected boolean");
+            case 6 -> gui.writeConsoleLine("Line " + line + ": incompatible types: expected integer/float/double");
         }
     }
 }
