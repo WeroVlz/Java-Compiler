@@ -121,7 +121,7 @@ public class Parser {
     public static DefaultMutableTreeNode run(Vector<Token> tokenVector, GUI userInterface){
         tokens = tokenVector;
         gui = userInterface;
-        SemanticAnalyzer.initializeGui(gui);
+        SemanticAnalyzer.run(gui);
         currentToken = 0;
         isSwitchBody = false;
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Parser Expression Tree");
@@ -157,6 +157,8 @@ public class Parser {
 
     public static void ruleMethod(DefaultMutableTreeNode parent){
         StringBuilder methodFirm = new StringBuilder();
+        parameterTyping = new StringBuilder();
+        methodParameters.clear();
         String methodName = "";
         String type = "";
         if (tokensExist() && searchTokenInList(currentToken,ACCESS_MODIFIER)){
@@ -290,8 +292,6 @@ public class Parser {
 
     public static void ruleParameter1(DefaultMutableTreeNode parent){
         String type = "";
-        parameterTyping = new StringBuilder();
-        methodParameters.clear();
         boolean isComma;
         do{
             isComma = false;
@@ -1318,7 +1318,7 @@ public class Parser {
                 node = new DefaultMutableTreeNode("Binary (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("STRING")){
-                SemanticAnalyzer.pushStack("string");
+                SemanticAnalyzer.pushStack("String");
                 node = new DefaultMutableTreeNode("String (" + token.getWord() + ")");
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("CHAR")){

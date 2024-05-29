@@ -35,4 +35,13 @@ public class SymbolTableItem {
         this.scope = scope;
         this.value = value;
     }
+
+    @Override
+    public String toString() {
+        return "SymbolTableItem{" +
+                "type='" + type + '\'' +
+                ", scope='" + scope + '\'' +
+                ", value='" + value + '\'' +
+                '}';
+    }
 }

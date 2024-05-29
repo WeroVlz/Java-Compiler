@@ -7,7 +7,7 @@ import java.util.Vector;
 public class SemanticAnalyzer {
 
     private static GUI gui;
-    private static final Hashtable<String, Vector<SymbolTableItem>> symbolTable = new Hashtable<>();
+    private static Hashtable<String, Vector<SymbolTableItem>> symbolTable;
     private static final Stack<String> variableStack = new Stack<>();
 
     private static final int OP_AND_OR = 0;
@@ -25,7 +25,7 @@ public class SemanticAnalyzer {
         put("double",2);
         put("boolean", 3);
         put("char", 4);
-        put("string",5);
+        put("String",5);
         put("void",6);
         put("error",7);
     }};
@@ -61,12 +61,12 @@ public class SemanticAnalyzer {
                     {"error", "error", "error", "error", "error", "error", "error","error"},
                     {"error", "error", "error", "error", "error", "error", "error","error"}
             }, {
-                    {"int", "float", "double", "error", "error", "string", "error","error"},
-                    {"float", "float", "double", "error", "error", "string", "error","error"},
-                    {"double", "double", "double", "error", "error", "string", "error","error"},
-                    {"error", "error", "error", "error", "error", "string", "error","error"},
-                    {"error", "error", "error", "error", "error", "string", "error","error"},
-                    {"string", "string", "string", "string", "string", "string", "error","error"},
+                    {"int", "float", "double", "error", "error", "String", "error","error"},
+                    {"float", "float", "double", "error", "error", "String", "error","error"},
+                    {"double", "double", "double", "error", "error", "String", "error","error"},
+                    {"error", "error", "error", "error", "error", "String", "error","error"},
+                    {"error", "error", "error", "error", "error", "String", "error","error"},
+                    {"String", "String", "String", "String", "String", "String", "error","error"},
                     {"error", "error", "error", "error", "error", "error", "error","error"},
                     {"error", "error", "error", "error", "error", "error", "error","error"}
             }, {
@@ -92,13 +92,30 @@ public class SemanticAnalyzer {
             }
     };
 
+    public static void run(GUI g){
+        gui = g;
+        symbolTable = new Hashtable<>();
+
+    }
+
     public static void initializeGui(GUI g){
         gui = g;
     }
 
     public static Hashtable<String, Vector<SymbolTableItem>> getSymbolTable(){ return symbolTable; }
 
-    public static void clearTable(){ symbolTable.clear(); }
+    public static void clearTable(){
+        symbolTable.clear();
+        while(!variableStack.isEmpty())
+            variableStack.pop();
+
+    }
+
+    public static void printTable(){
+        for (String key : symbolTable.keySet()){
+            System.out.println(key + ":" + symbolTable.get(key).toString());
+        }
+    };
 
     public static void pushStack(String type){
         variableStack.add(type);
