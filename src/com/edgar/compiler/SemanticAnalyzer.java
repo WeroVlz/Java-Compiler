@@ -7,7 +7,7 @@ import java.util.Vector;
 public class SemanticAnalyzer {
 
     private static GUI gui;
-    private static Hashtable<String, Vector<SymbolTableItem>> symbolTable;
+    private static final Hashtable<String, Vector<SymbolTableItem>> symbolTable = new Hashtable<>();
     private static final Stack<String> variableStack = new Stack<>();
 
     private static final int OP_AND_OR = 0;
@@ -94,13 +94,9 @@ public class SemanticAnalyzer {
 
     public static void run(GUI g){
         gui = g;
-        symbolTable = new Hashtable<>();
-
+        clearTable();
     }
 
-    public static void initializeGui(GUI g){
-        gui = g;
-    }
 
     public static Hashtable<String, Vector<SymbolTableItem>> getSymbolTable(){ return symbolTable; }
 
@@ -111,11 +107,10 @@ public class SemanticAnalyzer {
 
     }
 
-    public static void printTable(){
-        for (String key : symbolTable.keySet()){
-            System.out.println(key + ":" + symbolTable.get(key).toString());
-        }
-    };
+    public static void clearStack(){
+        while(!variableStack.isEmpty())
+            variableStack.pop();
+    }
 
     public static void pushStack(String type){
         variableStack.add(type);
@@ -148,12 +143,6 @@ public class SemanticAnalyzer {
                 symbolTable.get(id).add(new SymbolTableItem(content.getType(),content.getScope(),content.getValue()));
             else
                 errorHandler(id, line, 1);
-        }
-    }
-
-    public static void assignVariable(String id,int line){
-        if(!symbolTable.containsKey(id)){
-            errorHandler(id,line,2);
         }
     }
 
@@ -200,6 +189,9 @@ public class SemanticAnalyzer {
             case 4 -> gui.writeConsoleLine("Line " + line + ": incompatible types: type mismatch");
             case 5 -> gui.writeConsoleLine("Line " + line + ": incompatible types: expected boolean");
             case 6 -> gui.writeConsoleLine("Line " + line + ": incompatible types: expected integer/float/double");
+            case 7 -> gui.writeConsoleLine("Line " + line + ": incompatible types: expected integer");
+            case 8 -> gui.writeConsoleLine("Line " + line + ": incompatible return value");
+            case 9 -> gui.writeConsoleLine("Line " + line + ": function with given parameters not found");
         }
     }
 }

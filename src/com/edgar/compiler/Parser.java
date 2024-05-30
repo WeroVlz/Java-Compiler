@@ -11,8 +11,10 @@ public class Parser {
     private static int currentToken;
     private static boolean isSwitchBody;
     private static StringBuilder parameterTyping;
+    private static StringBuilder parameterTyping2;
     private static final Vector<ArrayList<String>> methodParameters = new Vector<>();
     private static boolean correctAssignment;
+    private static String methodType;
 
 
     private static final List<String> ACCESS_MODIFIER = List.of(
@@ -161,6 +163,8 @@ public class Parser {
         methodParameters.clear();
         String methodName = "";
         String type = "";
+        methodType = "";
+
         if (tokensExist() && searchTokenInList(currentToken,ACCESS_MODIFIER)){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node);
@@ -182,6 +186,7 @@ public class Parser {
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
                 type = tokens.get(currentToken).getWord();
+                methodType = tokens.get(currentToken).getWord();
                 currentToken++;
             }
             else
@@ -256,9 +261,13 @@ public class Parser {
     }
 
     public static void ruleCallMethod(DefaultMutableTreeNode parent){
-
+        StringBuilder callMethodFirm = new StringBuilder();
+        parameterTyping2 = new StringBuilder();
+        int line;
         if (checkTokenType(currentToken, "ID")){
             node = new DefaultMutableTreeNode("Identifier (" + tokens.get(currentToken).getWord() + ")");
+            callMethodFirm.append(tokens.get(currentToken).getWord());
+            line = tokens.get(currentToken).getLine();
             parent.add(node);
             currentToken++;
 
@@ -281,6 +290,13 @@ public class Parser {
                 parent.add(node);
                 ruleParameter2(node);
             }
+
+            callMethodFirm.append(parameterTyping2);
+
+            SemanticAnalyzer.pushStack(SemanticAnalyzer.getTypeById(callMethodFirm.toString(),line));
+
+            if (!SemanticAnalyzer.getSymbolTable().containsKey(callMethodFirm.toString()))
+                SemanticAnalyzer.errorHandler("",line,9);
 
             if (checkTokenWord(currentToken, ")")){
                 node = new DefaultMutableTreeNode("(");
@@ -322,6 +338,7 @@ public class Parser {
     }
 
     public static void ruleParameter2(DefaultMutableTreeNode parent){
+
         boolean isComma;
         do{
             isComma = false;
@@ -337,6 +354,8 @@ public class Parser {
             node = new DefaultMutableTreeNode("EXPRESSION");
             parent.add(node);
             ruleExpression(node);
+
+            parameterTyping2.append("-").append(SemanticAnalyzer.popStack());
 
             if (checkTokenWord(currentToken,",")){
                 node = new DefaultMutableTreeNode(",");
@@ -471,6 +490,36 @@ public class Parser {
             line = tokens.get(currentToken).getLine();
             SemanticAnalyzer.pushStack(SemanticAnalyzer.getTypeById(id,line));
             currentToken++;
+
+            if (tokensExist() && checkTokenWord(currentToken, "[")){
+                node = new DefaultMutableTreeNode("[");
+                parent.add(node);
+                currentToken++;
+
+                while(tokensExist() && isSameLine() && !(isFirst("EXPRESSION") || isFollow("EXPRESSION"))){
+                    if(isError(currentToken)){
+                        node = new DefaultMutableTreeNode("Error ("+tokens.get(currentToken).getWord() + ")");
+                        parent.add(node);
+                    }
+                    currentToken++;
+                }
+
+                node = new DefaultMutableTreeNode("EXPRESSION");
+                parent.add(node);
+                ruleExpression(node);
+
+                String arrIndex = SemanticAnalyzer.popStack();
+                System.out.println(arrIndex);
+                if (!arrIndex.equals("int")){
+                    SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),7);
+                }
+
+                if (checkTokenWord(currentToken, "]")){
+                    node = new DefaultMutableTreeNode("]");
+                    parent.add(node);
+                    currentToken++;
+                }else errorHandler(17);
+            }
         }
         else{
             errorHandler(6);
@@ -513,6 +562,8 @@ public class Parser {
     public static void ruleVariable(DefaultMutableTreeNode parent, String scope){
         boolean isArray = false;
         String type;
+        String id = "";
+        int line = 0;
         if(searchTokenInList(currentToken,DECLARATION_KEYWORDS)){
             node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
             parent.add(node);
@@ -520,10 +571,12 @@ public class Parser {
             if(tokensExist() && checkTokenType(currentToken,"ID") && isSameLine()){
                 node = new DefaultMutableTreeNode(tokens.get(currentToken).getWord());
                 parent.add(node);
-
+                id = tokens.get(currentToken).getWord();
+                line = tokens.get(currentToken).getLine();
                 type = tokens.get(currentToken-1).getWord();
                 SemanticAnalyzer.addVariable(tokens.get(currentToken).getWord(),new SymbolTableItem(type,scope,DEFAULT_VALUE.get(type)),
                         tokens.get(currentToken).getLine());
+                SemanticAnalyzer.pushStack(SemanticAnalyzer.getTypeById(id,line));
                 currentToken++;
             }
             else  errorHandler(6);
@@ -545,6 +598,12 @@ public class Parser {
                 node = new DefaultMutableTreeNode("EXPRESSION");
                 parent.add(node);
                 ruleExpression(node);
+
+                String arrIndex = SemanticAnalyzer.popStack();
+
+                if (!arrIndex.equals("int")){
+                    SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),7);
+                }
 
                 if (checkTokenWord(currentToken, "]")){
                     node = new DefaultMutableTreeNode("]");
@@ -599,9 +658,18 @@ public class Parser {
                     node = new DefaultMutableTreeNode("EXPRESSION");
                     parent.add(node);
                     ruleExpression(node);
+
+                    String var1 = SemanticAnalyzer.popStack();
+                    String var2 = SemanticAnalyzer.popStack();
+
+                    String resultAssignation = SemanticAnalyzer.calculateOperatorCube("=",var1,var2);
+
+                    if(!resultAssignation.equals("ok") && !var2.isEmpty())
+                        SemanticAnalyzer.errorHandler(id,line,4);
                 }
             }
         }
+        SemanticAnalyzer.clearStack();
     }
 
     public static void ruleArray(DefaultMutableTreeNode parent){
@@ -629,6 +697,12 @@ public class Parser {
             node = new DefaultMutableTreeNode("EXPRESSION");
             parent.add(node);
             ruleExpression(node);
+
+            String arrIndex = SemanticAnalyzer.popStack();
+
+            if (!arrIndex.equals("int")){
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),7);
+            }
 
 
             if (checkTokenWord(currentToken, "]")){
@@ -701,6 +775,11 @@ public class Parser {
             parent.add(node);
             ruleExpression(node);
 
+            String condition = SemanticAnalyzer.popStack();
+            if(!condition.equals("boolean")){
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),5);
+            }
+
             if(tokensExist() && isSameLine() && checkTokenWord(currentToken,")")) {
                 node = new DefaultMutableTreeNode(")");
                 parent.add(node);
@@ -754,6 +833,11 @@ public class Parser {
             parent.add(node);
             ruleExpression(node);
 
+            String condition = SemanticAnalyzer.popStack();
+            if(!condition.equals("boolean")){
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),5);
+            }
+
             if(tokensExist() && checkTokenWord(currentToken,")") && isSameLine()){
                 node = new DefaultMutableTreeNode(")");
                 parent.add(node);
@@ -798,6 +882,14 @@ public class Parser {
                 parent.add(node);
                 ruleExpression(node);
             }
+
+            String result = SemanticAnalyzer.popStack();
+
+            if (methodType.equals("void")){
+                if (!result.isEmpty())
+                    SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),8);
+            } else if (!result.equals(methodType))
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),8);
         }
     }
 
@@ -838,6 +930,11 @@ public class Parser {
         node = new DefaultMutableTreeNode("EXPRESSION");
         parent.add(node);
         ruleExpression(node);
+
+        String condition = SemanticAnalyzer.popStack();
+        if(!condition.equals("boolean")){
+            SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),5);
+        }
 
         if(checkTokenWord(currentToken, ")") && isSameLine()) {
             node = new DefaultMutableTreeNode(")");
@@ -885,6 +982,11 @@ public class Parser {
             node = new DefaultMutableTreeNode("EXPRESSION");
             parent.add(node);
             ruleExpression(node);
+
+            String condition = SemanticAnalyzer.popStack();
+            if(!condition.equals("boolean")){
+                SemanticAnalyzer.errorHandler("",tokens.get(currentToken-1).getLine(),5);
+            }
 
             if(checkTokenWord(currentToken,";") && isSameLine()){
                 node = new DefaultMutableTreeNode(";");
@@ -1291,7 +1393,7 @@ public class Parser {
                 parent.add(node); currentToken++;
             } else if(token.getToken().equals("ID")){
                 if (checkTokenWord(currentToken+1, "(")){
-                    SemanticAnalyzer.pushStack(SemanticAnalyzer.getTypeById(token.getWord(),token.getLine()));
+                    //SemanticAnalyzer.pushStack(SemanticAnalyzer.getTypeById(id,token.getLine()));
                     node = new DefaultMutableTreeNode("CALLMETHOD");
                     parent.add(node);
                     ruleCallMethod(node);
