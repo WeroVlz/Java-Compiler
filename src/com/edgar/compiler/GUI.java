@@ -156,10 +156,8 @@ public class GUI implements ActionListener {
                     DefaultMutableTreeNode treeRoot = Parser.run(tokens, this);
                     fillParserTree(parserTreeModel, treeRoot);
 
-                    Hashtable<String, Vector<SymbolTableItem>> symbolTypes = SemanticAnalyzer.getSymbolTable();
                     symbolModel.setRowCount(0);
-                    fillSymbolTypeTable(symbolModel,symbolTypes);
-                    SemanticAnalyzer.clearTable();
+                    fillSymbolTypeTable(symbolModel,SemanticAnalyzer.getSymbolTable());
 
                     consoleOutput(console, tokens.size(), lexer.getRows(), lexer.getErrorCount());
 

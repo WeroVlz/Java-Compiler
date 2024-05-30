@@ -25,7 +25,7 @@ public class SemanticAnalyzer {
         put("double",2);
         put("boolean", 3);
         put("char", 4);
-        put("string",5);
+        put("String",5);
         put("void",6);
         put("error",7);
     }};
@@ -61,12 +61,12 @@ public class SemanticAnalyzer {
                     {"error", "error", "error", "error", "error", "error", "error","error"},
                     {"error", "error", "error", "error", "error", "error", "error","error"}
             }, {
-                    {"int", "float", "double", "error", "error", "string", "error","error"},
-                    {"float", "float", "double", "error", "error", "string", "error","error"},
-                    {"double", "double", "double", "error", "error", "string", "error","error"},
-                    {"error", "error", "error", "error", "error", "string", "error","error"},
-                    {"error", "error", "error", "error", "error", "string", "error","error"},
-                    {"string", "string", "string", "string", "string", "string", "error","error"},
+                    {"int", "float", "double", "error", "error", "String", "error","error"},
+                    {"float", "float", "double", "error", "error", "String", "error","error"},
+                    {"double", "double", "double", "error", "error", "String", "error","error"},
+                    {"error", "error", "error", "error", "error", "String", "error","error"},
+                    {"error", "error", "error", "error", "error", "String", "error","error"},
+                    {"String", "String", "String", "String", "String", "String", "error","error"},
                     {"error", "error", "error", "error", "error", "error", "error","error"},
                     {"error", "error", "error", "error", "error", "error", "error","error"}
             }, {
@@ -92,13 +92,25 @@ public class SemanticAnalyzer {
             }
     };
 
-    public static void initializeGui(GUI g){
+    public static void run(GUI g){
         gui = g;
+        clearTable();
     }
+
 
     public static Hashtable<String, Vector<SymbolTableItem>> getSymbolTable(){ return symbolTable; }
 
-    public static void clearTable(){ symbolTable.clear(); }
+    public static void clearTable(){
+        symbolTable.clear();
+        while(!variableStack.isEmpty())
+            variableStack.pop();
+
+    }
+
+    public static void clearStack(){
+        while(!variableStack.isEmpty())
+            variableStack.pop();
+    }
 
     public static void pushStack(String type){
         variableStack.add(type);
@@ -131,12 +143,6 @@ public class SemanticAnalyzer {
                 symbolTable.get(id).add(new SymbolTableItem(content.getType(),content.getScope(),content.getValue()));
             else
                 errorHandler(id, line, 1);
-        }
-    }
-
-    public static void assignVariable(String id,int line){
-        if(!symbolTable.containsKey(id)){
-            errorHandler(id,line,2);
         }
     }
 
@@ -183,6 +189,9 @@ public class SemanticAnalyzer {
             case 4 -> gui.writeConsoleLine("Line " + line + ": incompatible types: type mismatch");
             case 5 -> gui.writeConsoleLine("Line " + line + ": incompatible types: expected boolean");
             case 6 -> gui.writeConsoleLine("Line " + line + ": incompatible types: expected integer/float/double");
+            case 7 -> gui.writeConsoleLine("Line " + line + ": incompatible types: expected integer");
+            case 8 -> gui.writeConsoleLine("Line " + line + ": incompatible return value");
+            case 9 -> gui.writeConsoleLine("Line " + line + ": function with given parameters not found");
         }
     }
 }
