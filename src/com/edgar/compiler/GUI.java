@@ -20,6 +20,7 @@ public class GUI implements ActionListener {
     private DefaultTableModel model;
     private DefaultTreeModel parserTreeModel;
     private DefaultTableModel symbolModel;
+    private JTextArea intermediateCode;
     private static JTextArea console;
 
     public GUI() {
@@ -43,6 +44,7 @@ public class GUI implements ActionListener {
 
         JTextArea editor = new JTextArea();
         console = new JTextArea(2,0);
+        intermediateCode = new JTextArea();
 
         EmptyBorder paddingBorder = new EmptyBorder(5, 5, 5, 5);
         console.setBorder(paddingBorder);
@@ -208,7 +210,6 @@ public class GUI implements ActionListener {
         return saveMenuItem;
     }
 
-
     public JPanel createMainPanel(Font customFont, JTextArea editor) {
 
         JPanel mainPanelC = new JPanel();
@@ -245,7 +246,7 @@ public class GUI implements ActionListener {
         JScrollPane parserTreeScrollable = new JScrollPane(parserTree);
         parserTreeScrollable.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
 
-        // ** Symbol Table
+        // *** Symbol Table ***
         String[] symbolColumnNames = {"Name","Type", "Scope", "Value"};
         Object[][] symbolData = {};
         symbolModel = new DefaultTableModel(symbolData, symbolColumnNames);
@@ -255,10 +256,18 @@ public class GUI implements ActionListener {
         JScrollPane symbolType = new JScrollPane(symbolTable);
         symbolType.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
 
+        // *** Intermediate Code
+        intermediateCode.setEditable(false);
+        intermediateCode.setFont(customFont);
+        JScrollPane intermediateCodePane = new JScrollPane(intermediateCode);
+        intermediateCodePane.setPreferredSize(new Dimension((int) (frame.getPreferredSize().getWidth() * 0.5), 100));
+        
+
 
         tabbedPane.add("Variable Explorer", variableExplorer);
         tabbedPane.add("Parser Tree", parserTreeScrollable);
         tabbedPane.add("Symbol Type Table", symbolType);
+        tabbedPane.add("Intermediate Code", intermediateCodePane);
 
         setGbcData(gbc,1,0,0.4,0.66,1, 2);
 
